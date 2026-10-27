@@ -1,0 +1,7 @@
+{
+  "_안내": "homeCardLink: 홈 카드를 눌렀을 때 이동할 곳. \"student\" = 학생 주차 페이지, \"game\" = 학생 게임 화면",
+  "org": "Ongo-gamedev2026",
+  "pagesBase": "https://ongo-gamedev2026.github.io",
+  "materialsUrl": "https://ongo-gamedev2026.github.io/materials/",
+  "homeCardLink": "student"
+}

@@ -1,0 +1,34 @@
+name: 제출 기록 모으기
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # 매시 7분마다
+  workflow_dispatch:       # Actions 화면에서 "Run workflow"로 바로 실행
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 학생 저장소 제출 확인
+        run: node scripts/collect.mjs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 새 기록 저장
+        run: |
+          if git diff --quiet data/submissions.json; then echo "새 제출 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/submissions.json
+          git commit -m "제출 기록 업데이트"
+          git push

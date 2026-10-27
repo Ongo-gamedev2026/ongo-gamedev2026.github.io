@@ -1,0 +1,45 @@
+{
+  "_안내": "학생을 추가하면 아래 목록에 한 줄을 추가하세요. 이름·학번은 절대 적지 마세요 (공개 저장소). nickname은 비워 둬도 됩니다.",
+  "students": [
+    {
+      "no": "01",
+      "nickname": "",
+      "repo": "game-01"
+    },
+    {
+      "no": "02",
+      "nickname": "",
+      "repo": "game-02"
+    },
+    {
+      "no": "03",
+      "nickname": "",
+      "repo": "game-03"
+    },
+    {
+      "no": "04",
+      "nickname": "",
+      "repo": "game-04"
+    },
+    {
+      "no": "05",
+      "nickname": "",
+      "repo": "game-05"
+    },
+    {
+      "no": "06",
+      "nickname": "",
+      "repo": "game-06"
+    },
+    {
+      "no": "07",
+      "nickname": "",
+      "repo": "game-07"
+    },
+    {
+      "no": "08",
+      "nickname": "",
+      "repo": "game-08"
+    }
+  ]
+}

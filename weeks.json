@@ -1,0 +1,79 @@
+{
+  "_안내": "docs의 첫 번째 문서가 출력 기본 문서입니다. path는 학생 저장소 안의 파일 위치입니다.",
+  "weeks": [
+    {
+      "week": 1,
+      "title": "AI와 만나는 첫 게임 개발",
+      "output": "고전 게임 웹 코드",
+      "docs": [
+        {
+          "name": "1주차 개발일지",
+          "path": "devlog/week01.md"
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "title": "관심 게임 이야기 · 게임 기획서 1차 과제",
+      "output": "게임 기획서",
+      "docs": [
+        {
+          "name": "게임 기획서",
+          "path": "docs/week2-plan.md"
+        },
+        {
+          "name": "2주차 개발일지",
+          "path": "devlog/week02.md"
+        }
+      ]
+    },
+    {
+      "week": 3,
+      "title": "기획서 피드백 및 구체화 (튜팅)",
+      "output": "보완한 게임 기획서",
+      "docs": [
+        {
+          "name": "게임 기획서 (보완)",
+          "path": "docs/week2-plan.md"
+        },
+        {
+          "name": "3주차 개발일지",
+          "path": "devlog/week03.md"
+        }
+      ]
+    },
+    {
+      "week": 4,
+      "title": "프롬프트 비교 실험 및 디버깅",
+      "output": "비교 소감문 · 1차 완성 게임",
+      "docs": [
+        {
+          "name": "4주차 개발일지",
+          "path": "devlog/week04.md"
+        }
+      ]
+    },
+    {
+      "week": 5,
+      "title": "동료 피드백 및 플레이테스트",
+      "output": "피드백 평가지 · 최종 게임",
+      "docs": [
+        {
+          "name": "5주차 개발일지",
+          "path": "devlog/week05.md"
+        }
+      ]
+    },
+    {
+      "week": 6,
+      "title": "프로젝트 웹 배포 및 공유",
+      "output": "게임 URL · QR코드",
+      "docs": [
+        {
+          "name": "6주차 개발일지",
+          "path": "devlog/week06.md"
+        }
+      ]
+    }
+  ]
+}

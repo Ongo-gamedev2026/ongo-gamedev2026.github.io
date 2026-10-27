@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>온고 게임제작반 2026</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<style>
+:root{
+  --bg:#f2f3f5; --card:#fff; --ink:#111; --sub:#666; --line:#e3e5e8;
+  --accent:#ff6b1a; --ok:#16a34a; --ok-bg:#e8f7ee; --v2:#2563eb; --v2-bg:#e8efff;
+  --none:#8a8f98; --none-bg:#f0f1f3; --side:#fff; --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+
+/* layout */
+.app{display:flex;min-height:100vh}
+.side{width:248px;flex:none;background:var(--side);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 12px 24px}
+.main{flex:1;min-width:0;padding:28px 32px 60px}
+.brand{display:block;padding:4px 12px 18px;font-weight:800;font-size:18px}
+.brand small{display:block;font-weight:500;font-size:12px;color:var(--sub)}
+.nav a,.nav button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:none;padding:9px 12px;border-radius:10px;color:#333;font-size:14.5px}
+.nav a:hover,.nav button:hover{background:#f4f5f7}
+.nav .on{background:#fff1e8;color:#c2410c;font-weight:700}
+.wk-btn .caret{width:14px;color:#999;transition:transform .15s}
+.wk.open .caret{transform:rotate(90deg)}
+.wk-btn b{font-weight:700;white-space:nowrap;flex:none}
+.wk-btn span.t{min-width:0}
+.wk-btn span.t{color:var(--sub);font-size:12.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wk-list{display:none;padding:2px 0 6px 22px}
+.wk.open .wk-list{display:block}
+.wk-list a{font-size:14px;padding:6px 12px}
+.dot{width:8px;height:8px;border-radius:50%;background:#d4d7dc;flex:none}
+.dot.v1{background:var(--ok)} .dot.v2{background:var(--v2)}
+.nav hr{border:0;border-top:1px solid var(--line);margin:12px 8px}
+.roster{margin:14px 8px 0;padding:10px 12px;border-radius:10px;background:#f7f7f8;font-size:12.5px;color:var(--sub)}
+.roster button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 8px;font-size:12.5px;margin-top:6px}
+.btn.menu-toggle{display:none}
+
+/* rows (home) */
+.hero{margin:0 0 30px}
+.hero h1{font-size:26px;margin:0 0 4px}
+.hero p{margin:0;color:var(--sub)}
+.row{margin:0 0 40px}
+.row-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.row-head h2{font-size:22px;margin:0;font-weight:800}
+.row-head h2 em{font-style:normal;color:var(--accent)}
+.row-head .grow{flex:1}
+.row-head .more{white-space:nowrap;text-decoration:underline;text-underline-offset:4px;color:#333}
+.arrow{width:38px;height:38px;border-radius:50%;border:0;background:#111;color:#fff;font-size:18px;display:grid;place-items:center}
+.arrow.prev{background:#e4e5e8;color:#fff}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 48px)/3);gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:6px}
+.strip::-webkit-scrollbar{display:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px}
+
+/* card */
+.card{scroll-snap-align:start;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.thumb{position:relative;aspect-ratio:16/9;overflow:hidden;display:flex;align-items:flex-end;padding:18px 22px}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.thumb .big{position:relative;font-size:52px;font-weight:900;line-height:1;letter-spacing:-1px}
+.thumb .big small{display:block;font-size:15px;font-weight:700;letter-spacing:0;opacity:.85;margin-bottom:6px}
+.thumb .deco{position:absolute;right:18px;bottom:10px;font-size:64px;opacity:.9}
+.pill{position:absolute;top:16px;left:16px;z-index:1;color:#111;display:inline-flex;align-items:center;gap:6px;background:#fff;border-radius:999px;padding:6px 14px;font-weight:700;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--none)}
+.pill.v1 i{background:var(--ok)} .pill.v2 i{background:var(--v2)}
+.card-body{padding:18px 22px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card-title{font-weight:800;font-size:17px}
+.card-date{color:var(--sub);font-size:14px;min-height:21px}
+.card-meta{display:flex;gap:14px;color:#555;font-size:13.5px;margin-top:auto;padding-top:8px}
+
+/* detail */
+.crumb{color:var(--sub);font-size:14px;margin-bottom:10px}
+.crumb a:hover{text-decoration:underline}
+.detail-top{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:28px;background:#fff;border-radius:var(--radius);padding:22px;margin-bottom:24px}
+.detail-top .thumb{border-radius:12px}
+.detail-info h1{margin:2px 0 4px;font-size:24px}
+.detail-info .topic{color:var(--sub);margin:0 0 14px}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13.5px;background:var(--none-bg);color:var(--none)}
+.badge.v1{background:var(--ok-bg);color:var(--ok)} .badge.v2{background:var(--v2-bg);color:var(--v2)}
+.history{margin:14px 0;padding:0;list-style:none;font-size:14px}
+.history li{padding:4px 0;color:#333}
+.history li a{color:var(--v2);text-decoration:underline}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
+.btn:hover{background:#f6f7f8}
+.btn.primary{background:#111;color:#fff;border-color:#111}
+.btn.primary:hover{background:#333}
+.hint{font-size:12.5px;color:var(--sub);margin-top:8px}
+.doc-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:14px}
+.tab.on{background:#111;color:#fff;border-color:#111}
+.doc-bar select{margin-left:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:14px;background:#fff}
+.paper{background:#fff;border-radius:var(--radius);padding:34px 40px;min-height:200px}
+.empty{color:var(--sub);text-align:center;padding:40px 10px}
+
+/* markdown */
+.md h1{font-size:24px;margin:0 0 12px;padding-bottom:10px;border-bottom:2px solid #111}
+.md h2{font-size:18px;margin:26px 0 8px;padding:6px 10px;background:#f4f5f7;border-left:4px solid var(--accent);border-radius:4px}
+.md h3{font-size:16px;margin:18px 0 6px}
+.md h4{font-size:15px;margin:14px 0 4px}
+.md p,.md li{margin:4px 0}
+.md .ex{color:#8a8f98;font-size:14px}
+.md .ans{border-bottom:1px solid #cfd3d8;padding-bottom:6px;min-height:32px}
+.md .ans strong:first-child{color:var(--accent)}
+.md blockquote{margin:10px 0;padding:8px 14px;background:#fff8f2;border-radius:8px;color:#7c4a1e}
+.md table{border-collapse:collapse;width:100%;margin:8px 0}
+.md th,.md td{border:1px solid #bbb;padding:6px 8px;text-align:left}
+.md th{background:#f4f5f7}
+.md code{background:#f4f5f7;border-radius:4px;padding:1px 4px}
+.md pre{background:#f4f5f7;padding:10px 12px;border-radius:8px;white-space:pre-wrap}
+.md ul{padding-left:22px}
+.md li:has(> input[type=checkbox]){list-style:none;margin-left:-20px}
+.md img{max-width:100%}
+
+/* status table */
+.tbl-wrap{background:#fff;border-radius:var(--radius);padding:8px;overflow-x:auto}
+table.status{border-collapse:collapse;width:100%;min-width:640px}
+table.status th,table.status td{padding:12px 10px;text-align:center;border-bottom:1px solid var(--line)}
+table.status th{font-size:13.5px;color:var(--sub);font-weight:600}
+table.status td:first-child,table.status th:first-child{text-align:left;font-weight:700}
+table.status tr:last-child td{border-bottom:0}
+table.status a.badge:hover{filter:brightness(.95)}
+
+/* print view */
+.print-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
+.print-bar .note{color:var(--sub);font-size:13px}
+.sheet{background:#fff;width:210mm;max-width:100%;min-height:297mm;margin:0 auto 24px;padding:16mm 16mm 18mm;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.sheet-head{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:13.5px}
+.sheet-head td{border:1px solid #333;padding:7px 8px;height:34px}
+.sheet-head td.k{background:#f1f2f4;font-weight:700;width:13%;text-align:center;white-space:nowrap}
+.sheet .md h1{font-size:22px}
+.sheet .md blockquote.howto{display:none}
+
+@media (max-width:1100px){.strip{grid-auto-columns:calc((100% - 24px)/2)}}
+@media (max-width:760px){
+  .app{display:block}
+  .side{position:fixed;z-index:20;left:0;top:0;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 30px rgba(0,0,0,.15)}
+  .side.show{transform:none}
+  .btn.menu-toggle{display:inline-flex;margin-bottom:16px}
+  .main{padding:18px 16px 50px}
+  .strip{grid-auto-columns:82%}
+  .row-head h2{font-size:19px}
+  .row-head .arrow{display:none}
+  .detail-top{grid-template-columns:1fr}
+  .paper{padding:22px 18px}
+}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .side,.print-bar,.menu-toggle,.crumb{display:none!important}
+  .main{padding:0}
+  .sheet{box-shadow:none;margin:0;width:auto;min-height:0;page-break-after:always;break-after:page}
+  .sheet:last-child{page-break-after:auto;break-after:auto}
+  .md h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sheet-head td.k{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main class="main" id="main"><div class="empty">불러오는 중…</div></main>
+</div>
+
+<script>
+const S = {cfg:null, students:[], weeks:[], recs:[], roster:null, thumbs:{}};
+const COLORS = [
+  ["#1f8a43","#fff"],["#eeeeee","#e8590c"],["#f3ece2","#222"],["#2b4acb","#fff"],
+  ["#ffd43b","#222"],["#7048e8","#fff"],["#e64980","#fff"],["#0c8599","#fff"]
+];
+const DECO = ["🕹️","🎮","👾","🚀","⭐","🐱","🧩","🏆"];
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = iso => { if(!iso) return ""; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`; };
+const fmtFull = iso => { if(!iso) return ""; const d=new Date(iso); return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`; };
+
+async function getJSON(url){ const r = await fetch(url + (url.includes("?")?"&":"?") + "t=" + Date.now()); if(!r.ok) throw new Error(url); return r.json(); }
+
+/* ---------- data helpers ---------- */
+function label(st){ return `학생 ${st.no}` + (st.nickname ? ` · ${st.nickname}` : ""); }
+function stuIdx(st){ return S.students.indexOf(st); }
+function findStu(repo){ return S.students.find(s => s.repo === repo); }
+function findWeek(n){ return S.weeks.find(w => w.week === +n); }
+function subs(repo, week){
+  return S.recs.filter(r => r.repo === repo && r.week === +week).sort((a,b) => a.version - b.version);
+}
+function state(repo, week){
+  const list = subs(repo, week); const last = list[list.length-1];
+  if(!last) return {cls:"", text:"미제출", list, last:null, next:1};
+  return {cls: last.version >= 2 ? "v2" : "v1", text:`v${last.version} 제출`, list, last, next:last.version+1};
+}
+function gameUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/`; }
+function repoUrl(st){ return `https://github.com/${S.cfg.org}/${st.repo}`; }
+function rawUrl(st, ref, path){ return `https://raw.githubusercontent.com/${S.cfg.org}/${st.repo}/${ref}/${path}`; }
+function releaseUrl(st, week, v){
+  const q = new URLSearchParams({tag:`week${week}-v${v}`, title:`${week}주차 v${v} 제출`, body:`${week}주차 과제를 제출합니다.`});
+  return `${repoUrl(st)}/releases/new?${q}`;
+}
+function rosterOf(st){ return S.roster ? S.roster[st.no] || S.roster[st.repo] || null : null; }
+
+/* thumbnails: check once per student whether thumbnail.png exists */
+function loadThumbs(){
+  S.students.forEach(st => {
+    const img = new Image();
+    img.onload = () => { S.thumbs[st.repo] = img.src; document.querySelectorAll(`[data-thumb="${st.repo}"]`).forEach(el => setThumb(el, st)); };
+    img.src = `${S.cfg.pagesBase}/${st.repo}/thumbnail.png`;
+  });
+}
+function setThumb(el, st){ if(S.thumbs[st.repo] && !el.querySelector("img")){ const i=document.createElement("img"); i.src=S.thumbs[st.repo]; i.alt=""; el.prepend(i); el.querySelectorAll(".big,.deco").forEach(x=>x.remove()); } }
+function thumbHTML(st, pill){
+  const i = stuIdx(st) % COLORS.length; const [bg, fg] = COLORS[i];
+  return `<div class="thumb" data-thumb="${esc(st.repo)}" style="background:${bg};color:${fg}">
+    ${pill || ""}
+    <div class="big"><small>온고 게임제작반</small>${esc(st.no)}</div>
+    <div class="deco">${DECO[i % DECO.length]}</div>
+  </div>`;
+}
+
+/* ---------- sidebar ---------- */
+function renderSide(route){
+  const open = new Set(JSON.parse(sessionStorage.getItem("openWeeks") || "[]"));
+  if(route.week) open.add(+route.week);
+  const wk = S.weeks.map(w => `
+    <div class="wk ${open.has(w.week) ? "open" : ""}" data-w="${w.week}">
+      <button class="wk-btn ${route.name==="week" && +route.week===w.week ? "on":""}" data-toggle="${w.week}">
+        <span class="caret">▶</span><b>${w.week}주차</b><span class="t">${esc(w.title)}</span>
+      </button>
+      <div class="wk-list">
+        <a href="#/week/${w.week}" class="${route.name==="week" && +route.week===w.week ? "on":""}">📋 ${w.week}주차 전체 보기</a>
+        ${S.students.map(st => { const s = state(st.repo, w.week);
+          const on = route.name==="detail" && +route.week===w.week && route.repo===st.repo;
+          return `<a href="#/week/${w.week}/${esc(st.repo)}" class="${on?"on":""}"><i class="dot ${s.cls}"></i>${w.week}주차 ${esc(label(st))}</a>`; }).join("")}
+      </div>
+    </div>`).join("");
+  const rosterTxt = S.roster ? `명단 불러옴 (${Object.keys(S.roster).length}명)<br><button data-roster-clear>명단 지우기</button>`
+                             : `출력할 때 이름·학번을 넣으려면 선생님 PC의 명단 파일(CSV)을 불러오세요.<br><button data-roster-load>명단 불러오기</button>`;
+  $("#side").innerHTML = `
+    <a class="brand" href="#/">🎮 온고 게임제작반<small>2026 · AI 게임 만들기</small></a>
+    <nav class="nav">
+      <a href="#/" class="${route.name==="home"?"on":""}">🏠 홈</a>
+      <hr>
+      ${wk}
+      <hr>
+      <a href="#/status" class="${route.name==="status"?"on":""}">📊 전체 현황</a>
+      <a href="${esc(S.cfg.materialsUrl)}" target="_blank" rel="noopener">📚 수업 자료실 ↗</a>
+    </nav>
+    <div class="roster">${rosterTxt}<input type="file" accept=".csv,.txt" hidden id="rosterFile"></div>`;
+  $("#side").onclick = e => {
+    const t = e.target.closest("[data-toggle]");
+    if(t){ const n=+t.dataset.toggle; const box=t.parentElement; box.classList.toggle("open");
+      box.classList.contains("open") ? open.add(n) : open.delete(n);
+      sessionStorage.setItem("openWeeks", JSON.stringify([...open])); return; }
+    if(e.target.closest("[data-roster-load]")) $("#rosterFile").click();
+    if(e.target.closest("[data-roster-clear]")){ S.roster=null; try{sessionStorage.removeItem("roster")}catch(_){}; route_(); }
+    if(e.target.closest("a")) $("#side").classList.remove("show");
+  };
+  $("#rosterFile").onchange = async e => { const f=e.target.files[0]; if(!f) return; parseRoster(await f.text()); route_(); };
+}
+
+/* roster CSV: 번호,이름,학번 (header optional). Stays in this browser tab only. */
+function parseRoster(text){
+  const out = {};
+  text.replace(/^﻿/,"").split(/\r?\n/).forEach(line => {
+    const c = line.split(",").map(x => x.trim()); if(c.length < 2) return;
+    let no = c[0].replace(/^game-/,""); if(!/^\d+$/.test(no)) return;
+    no = no.padStart(2,"0"); out[no] = {name:c[1]||"", id:c[2]||""};
+  });
+  S.roster = Object.keys(out).length ? out : null;
+  try{ S.roster ? sessionStorage.setItem("roster", JSON.stringify(out)) : sessionStorage.removeItem("roster"); }catch(_){}
+  if(!S.roster) alert("명단을 읽지 못했어요. 한 줄에 '번호,이름,학번' 형식인지 확인해 주세요.");
+}
+
+/* ---------- views ---------- */
+function card(st, w){
+  const s = state(st.repo, w.week);
+  const href = S.cfg.homeCardLink === "game" ? gameUrl(st) : `#/week/${w.week}/${st.repo}`;
+  const target = S.cfg.homeCardLink === "game" ? ` target="_blank" rel="noopener"` : "";
+  const date = s.last ? (s.list.length > 1 ? `제출 ${fmt(s.list[0].published_at)} · 수정 ${fmt(s.last.published_at)}` : `제출 ${fmt(s.last.published_at)}`) : "아직 제출 전이에요";
+  return `<a class="card" href="${href}"${target}>
+    ${thumbHTML(st, `<span class="pill ${s.cls}"><i></i>${s.text}</span>`)}
+    <div class="card-body">
+      <div class="card-title">${esc(label(st))}</div>
+      <div class="card-date">${date}</div>
+      <div class="card-meta"><span>📄 ${w.docs.length}개 문서</span><span>🔁 제출 ${s.list.length}회</span></div>
+    </div></a>`;
+}
+function countDone(w){ return S.students.filter(st => subs(st.repo, w.week).length).length; }
+
+function viewHome(){
+  const upd = S.updated ? `제출 기록 갱신: ${new Date(S.updated).toLocaleString("ko-KR")}` : "아직 제출 기록이 없어요";
+  return `<div class="hero"><h1>주차별 제출 현황</h1><p>${esc(upd)}</p></div>` +
+    S.weeks.map(w => `
+    <section class="row">
+      <div class="row-head">
+        <h2>${w.week}주차 · ${esc(w.title)} <em>${countDone(w)}/${S.students.length}</em></h2>
+        <span class="grow"></span>
+        <a class="more" href="#/week/${w.week}">더보기</a>
+        <button class="arrow prev" data-scroll="-1" aria-label="이전">‹</button>
+        <button class="arrow" data-scroll="1" aria-label="다음">›</button>
+      </div>
+      <div class="strip">${S.students.map(st => card(st, w)).join("")}</div>
+    </section>`).join("");
+}
+
+function viewWeek(n){
+  const w = findWeek(n); if(!w) return `<div class="empty">없는 주차예요.</div>`;
+  const all = S.students.map(s => s.repo).join(",");
+  return `<div class="crumb"><a href="#/">홈</a> › ${w.week}주차</div>
+    <div class="row-head"><h2>${w.week}주차 · ${esc(w.title)} <em>${countDone(w)}/${S.students.length}</em></h2></div>
+    <p style="margin:-8px 0 18px;color:var(--sub)">성과물: ${esc(w.output)}</p>
+    <div class="btns" style="margin-bottom:20px">
+      <a class="btn" href="#/print/${w.week}/${all}/latest">🖨 전체 출력 (최신 제출본)</a>
+    </div>
+    <div class="grid">${S.students.map(st => card(st, w)).join("")}</div>`;
+}
+
+function viewDetail(n, repo){
+  const w = findWeek(n), st = findStu(repo);
+  if(!w || !st) return `<div class="empty">페이지를 찾을 수 없어요.</div>`;
+  const s = state(st.repo, w.week);
+  const hist = s.list.length ? s.list.map(r => `<li>v${r.version} · ${fmtFull(r.published_at)} <a href="${esc(r.url)}" target="_blank" rel="noopener">제출 기록</a></li>`).join("")
+                             : `<li style="color:var(--sub)">아직 제출하지 않았어요.</li>`;
+  const verOpts = [`<option value="main">작성 중 (최신 저장본)</option>`]
+    .concat(s.list.slice().reverse().map(r => `<option value="${esc(r.tag)}">v${r.version} 제출본 (${fmt(r.published_at)})</option>`)).join("");
+  return `<div class="crumb"><a href="#/">홈</a> › <a href="#/week/${w.week}">${w.week}주차</a> › ${esc(label(st))}</div>
+    <div class="detail-top">
+      ${thumbHTML(st, `<span class="pill ${s.cls}"><i></i>${s.text}</span>`)}
+      <div class="detail-info">
+        <span class="badge ${s.cls}">${s.text}</span>
+        <h1>${esc(label(st))}</h1>
+        <p class="topic">${w.week}주차 · ${esc(w.title)} — 성과물: ${esc(w.output)}</p>
+        <ul class="history">${hist}</ul>
+        <div class="btns">
+          <a class="btn primary" href="${releaseUrl(st, w.week, s.next)}" target="_blank" rel="noopener">📮 ${w.week}주차 v${s.next} 제출하기</a>
+          <a class="btn" id="printBtn" href="#">🖨 출력</a>
+          <a class="btn" href="${gameUrl(st)}" target="_blank" rel="noopener">🎮 게임 보기</a>
+          <a class="btn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 내 저장소</a>
+        </div>
+        <p class="hint">제출하기 → GitHub 화면 맨 아래 초록색 <b>Publish release</b>를 누르면 제출 완료! 메인 사이트에는 최대 1시간 뒤에 표시돼요.</p>
+      </div>
+    </div>
+    <div class="doc-bar">
+      ${w.docs.map((d,i) => `<button class="tab ${i?"":"on"}" data-doc="${i}">${esc(d.name)}</button>`).join("")}
+      <select id="verSel" aria-label="버전">${verOpts}</select>
+    </div>
+    <div class="paper"><div class="md" id="doc"><div class="empty">문서를 불러오는 중…</div></div></div>`;
+}
+
+function viewStatus(){
+  const head = S.weeks.map(w => `<th>${w.week}주차<br><span style="font-weight:400">${countDone(w)}/${S.students.length}</span></th>`).join("");
+  const rows = S.students.map(st => `<tr><td>${esc(label(st))}</td>${S.weeks.map(w => { const s = state(st.repo, w.week);
+      return `<td><a class="badge ${s.cls}" href="#/week/${w.week}/${esc(st.repo)}">${s.last ? "v"+s.last.version+" · "+fmt(s.last.published_at) : "–"}</a></td>`; }).join("")}</tr>`).join("");
+  return `<div class="crumb"><a href="#/">홈</a> › 전체 현황</div>
+    <div class="row-head"><h2>전체 현황</h2></div>
+    <div class="tbl-wrap"><table class="status"><thead><tr><th>학생</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function viewPrint(n, repos, ver, docIdx){
+  const w = findWeek(n); if(!w) return `<div class="empty">없는 주차예요.</div>`;
+  const list = repos.split(",").map(findStu).filter(Boolean);
+  const d = w.docs[+docIdx || 0];
+  return `<div class="crumb"><a href="#/">홈</a> › <a href="#/week/${w.week}">${w.week}주차</a> › 출력</div>
+    <div class="print-bar">
+      <button class="btn primary" onclick="window.print()">🖨 인쇄하기 (Ctrl+P)</button>
+      <a class="btn" href="javascript:history.back()">← 돌아가기</a>
+      <span class="note">${S.roster ? "✅ 명단을 불러와서 이름·학번이 채워져요." : "명단을 불러오지 않아서 이름·학번 칸은 비어 있어요 (왼쪽 아래 '명단 불러오기')."} 인쇄 설정에서 '머리글/바닥글'은 끄세요.</span>
+    </div>
+    ${list.map(st => `<div class="sheet" data-sheet="${esc(st.repo)}">
+      <table class="sheet-head"><tr>
+        <td class="k">번호</td><td>${esc(st.no)}</td>
+        <td class="k">이름</td><td>${esc(rosterOf(st)?.name || "")}</td>
+        <td class="k">학번</td><td>${esc(rosterOf(st)?.id || "")}</td></tr><tr>
+        <td class="k">작성일</td><td colspan="2" data-date>—</td>
+        <td class="k">제출 버전</td><td colspan="2" data-ver>—</td></tr></table>
+      <div class="md" data-doc><div class="empty">불러오는 중…</div></div>
+    </div>`).join("")}`
+    .concat(`<div id="printMeta" hidden data-meta="${esc(JSON.stringify({week:w.week, ver, path:d.path}))}"></div>`);
+}
+
+/* ---------- markdown ---------- */
+async function fetchDoc(st, ref, path){
+  const r = await fetch(rawUrl(st, ref, path));
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(r.status);
+  return r.text();
+}
+function renderMd(text){
+  const html = DOMPurify.sanitize(marked.parse(text, {gfm:true, breaks:true}));
+  const box = document.createElement("div"); box.innerHTML = html;
+  box.querySelectorAll("p").forEach(p => {
+    const t = p.textContent.trim();
+    if(/^예\s*[:：)]/.test(t)) p.classList.add("ex");
+    if(/^답\s*[:：]/.test(t)) p.classList.add("ans");
+  });
+  box.querySelectorAll("blockquote").forEach(b => { if(/작성 방법|Commit changes/.test(b.textContent)) b.classList.add("howto"); });
+  box.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; });
+  return box.innerHTML;
+}
+async function loadDetailDoc(st, w){
+  const docEl = $("#doc"); if(!docEl) return;
+  const i = +($(".tab.on")?.dataset.doc || 0); const ref = $("#verSel").value;
+  docEl.innerHTML = `<div class="empty">문서를 불러오는 중…</div>`;
+  try{
+    const t = await fetchDoc(st, ref, w.docs[i].path);
+    docEl.innerHTML = t == null ? `<div class="empty">아직 문서가 없어요. (저장소가 만들어지지 않았거나 파일이 없어요)</div>` : renderMd(t);
+  }catch(e){ docEl.innerHTML = `<div class="empty">문서를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</div>`; }
+}
+async function loadPrintDocs(){
+  const meta = JSON.parse($("#printMeta").dataset.meta);
+  await Promise.all([...document.querySelectorAll("[data-sheet]")].map(async sh => {
+    const st = findStu(sh.dataset.sheet); const s = state(st.repo, meta.week);
+    let rec = null, ref = "main";
+    if(meta.ver === "latest" && s.last){ rec = s.last; }
+    else if(/^v\d+$/.test(meta.ver)){ rec = s.list.find(r => "v"+r.version === meta.ver) || null; }
+    if(rec) ref = rec.tag;
+    $("[data-date]", sh).textContent = rec ? fmtFull(rec.published_at) : "";
+    $("[data-ver]", sh).textContent = rec ? `v${rec.version}` : "미제출 (작성 중 내용)";
+    try{ const t = await fetchDoc(st, ref, meta.path);
+      $("[data-doc]", sh).innerHTML = t == null ? `<div class="empty">문서가 없어요.</div>` : renderMd(t);
+    }catch(e){ $("[data-doc]", sh).innerHTML = `<div class="empty">문서를 불러오지 못했어요.</div>`; }
+  }));
+}
+
+/* ---------- router ---------- */
+function parse(){
+  const p = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  if(p[0] === "week" && p[2]) return {name:"detail", week:p[1], repo:p[2]};
+  if(p[0] === "week") return {name:"week", week:p[1]};
+  if(p[0] === "status") return {name:"status"};
+  if(p[0] === "print") return {name:"print", week:p[1], repos:p[2]||"", ver:p[3]||"latest", doc:p[4]||0};
+  return {name:"home"};
+}
+function route_(){
+  const r = parse(); renderSide(r);
+  const main = $("#main");
+  const tog = `<button class="btn menu-toggle" onclick="document.getElementById('side').classList.add('show')">☰ 메뉴</button>`;
+  if(r.name === "home") main.innerHTML = tog + viewHome();
+  if(r.name === "week") main.innerHTML = tog + viewWeek(r.week);
+  if(r.name === "status") main.innerHTML = tog + viewStatus();
+  if(r.name === "print"){ main.innerHTML = tog + viewPrint(r.week, r.repos, r.ver, r.doc); loadPrintDocs(); }
+  if(r.name === "detail"){
+    main.innerHTML = tog + viewDetail(r.week, r.repo);
+    const st = findStu(r.repo), w = findWeek(r.week);
+    if(st && w){
+      loadDetailDoc(st, w);
+      main.querySelectorAll(".tab").forEach(b => b.onclick = () => { main.querySelectorAll(".tab").forEach(x => x.classList.remove("on")); b.classList.add("on"); loadDetailDoc(st, w); });
+      $("#verSel").onchange = () => loadDetailDoc(st, w);
+      $("#printBtn").onclick = e => { e.preventDefault(); const v = $("#verSel").value; const ver = v === "main" ? "main" : "v" + v.split("-v")[1];
+        location.hash = `#/print/${w.week}/${st.repo}/${ver}/${$(".tab.on").dataset.doc}`; };
+    }
+  }
+  main.querySelectorAll("[data-scroll]").forEach(b => b.onclick = () => {
+    const strip = b.closest(".row").querySelector(".strip"); strip.scrollBy({left: +b.dataset.scroll * strip.clientWidth, behavior:"smooth"}); });
+  main.querySelectorAll("[data-thumb]").forEach(el => setThumb(el, findStu(el.dataset.thumb)));
+  if(r.name !== "print") window.scrollTo(0, 0);
+}
+
+(async function init(){
+  try{
+    const [cfg, stu, wk, sub] = await Promise.all([getJSON("config.json"), getJSON("students.json"), getJSON("weeks.json"), getJSON("data/submissions.json")]);
+    S.cfg = cfg; S.students = stu.students; S.weeks = wk.weeks; S.recs = sub.records || []; S.updated = sub.updated;
+  }catch(e){ $("#main").innerHTML = `<div class="empty">설정 파일을 불러오지 못했어요.</div>`; return; }
+  try{ const r = sessionStorage.getItem("roster"); if(r) S.roster = JSON.parse(r); }catch(_){}
+  window.addEventListener("hashchange", route_);
+  route_(); loadThumbs();
+})();
+</script>
+</body>
+</html>
