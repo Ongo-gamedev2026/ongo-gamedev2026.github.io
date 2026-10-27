@@ -1,5 +1,5 @@
 {
-  "_안내": "docs의 첫 번째 문서가 출력 기본 문서입니다. path는 학생 저장소 안의 파일 위치입니다.",
+  "_안내": "docs의 첫 번째 문서가 출력 기본 문서입니다. path는 학생 저장소 안의 파일 위치입니다. game: true인 주차는 제출할 때 패치노트 양식이 나오고 버전별 플레이에 들어가요.",
   "weeks": [
     {
       "week": 1,
@@ -10,7 +10,8 @@
           "name": "1주차 개발일지",
           "path": "devlog/week01.md"
         }
-      ]
+      ],
+      "game": false
     },
     {
       "week": 2,
@@ -25,7 +26,8 @@
           "name": "2주차 개발일지",
           "path": "devlog/week02.md"
         }
-      ]
+      ],
+      "game": false
     },
     {
       "week": 3,
@@ -40,7 +42,8 @@
           "name": "3주차 개발일지",
           "path": "devlog/week03.md"
         }
-      ]
+      ],
+      "game": false
     },
     {
       "week": 4,
@@ -51,7 +54,8 @@
           "name": "4주차 개발일지",
           "path": "devlog/week04.md"
         }
-      ]
+      ],
+      "game": true
     },
     {
       "week": 5,
@@ -62,7 +66,8 @@
           "name": "5주차 개발일지",
           "path": "devlog/week05.md"
         }
-      ]
+      ],
+      "game": true
     },
     {
       "week": 6,
@@ -73,7 +78,8 @@
           "name": "6주차 개발일지",
           "path": "devlog/week06.md"
         }
-      ]
+      ],
+      "game": true
     }
   ]
 }

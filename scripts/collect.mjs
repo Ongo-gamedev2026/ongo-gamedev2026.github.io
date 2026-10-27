@@ -27,6 +27,7 @@ for (const st of students) {
     data.records.push({
       repo: st.repo, tag: rel.tag_name, week: +m[1], version: +m[2],
       published_at: rel.published_at || rel.created_at, url: rel.html_url,
+      notes: (rel.body || "").slice(0, 3000),
       recorded_at: new Date().toISOString()
     });
     seen.add(key); added++;

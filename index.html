@@ -87,6 +87,7 @@ button{font:inherit;cursor:pointer}
 .history{margin:14px 0;padding:0;list-style:none;font-size:14px}
 .history li{padding:4px 0;color:#333}
 .history li a{color:var(--v2);text-decoration:underline}
+.pn{margin:4px 0 8px;font-size:14px}.pn summary{cursor:pointer;color:var(--sub)}.pn .md{background:#f7f8fa;border-radius:8px;padding:8px 12px;margin-top:4px}.pn .md h2{font-size:14px;margin:4px 0;padding:0;background:none;border:0}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
 .btn:hover{background:#f6f7f8}
@@ -201,7 +202,9 @@ function hubUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/`; }
 function repoUrl(st){ return `https://github.com/${S.cfg.org}/${st.repo}`; }
 function rawUrl(st, ref, path){ return `https://raw.githubusercontent.com/${S.cfg.org}/${st.repo}/${ref}/${path}`; }
 function releaseUrl(st, week, v){
-  const q = new URLSearchParams({tag:`week${week}-v${v}`, title:`${week}주차 v${v} 제출`, body:`${week}주차 과제를 제출합니다.`});
+  const w = findWeek(week);
+  const body = w && w.game ? "## 🛠 패치노트\n- 바뀐 점: \n- 고친 버그: \n- 다음 버전에서 할 일: " : "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ";
+  const q = new URLSearchParams({tag:`week${week}-v${v}`, title:`${week}주차 v${v} 제출`, body});
   return `${repoUrl(st)}/releases/new?${q}`;
 }
 function rosterOf(st){ return S.roster ? S.roster[st.no] || S.roster[st.repo] || null : null; }
@@ -326,7 +329,7 @@ function viewDetail(n, repo){
   const w = findWeek(n), st = findStu(repo);
   if(!w || !st) return `<div class="empty">페이지를 찾을 수 없어요.</div>`;
   const s = state(st.repo, w.week);
-  const hist = s.list.length ? s.list.map(r => `<li>v${r.version} · ${fmtFull(r.published_at)} <a href="${esc(r.url)}" target="_blank" rel="noopener">제출 기록</a></li>`).join("")
+  const hist = s.list.length ? s.list.map(r => `<li>v${r.version} · ${fmtFull(r.published_at)} <a href="${esc(r.url)}" target="_blank" rel="noopener">제출 기록</a>${w.game ? ` · <a href="${hubUrl(st)}versions.html?v=${esc(r.tag)}" target="_blank" rel="noopener">이 버전 플레이</a>` : ""}${r.notes ? `<details class="pn"><summary>${w.game ? "패치노트" : "제출 메모"}</summary><div class="md">${renderMd(r.notes)}</div></details>` : ""}</li>`).join("")
                              : `<li style="color:var(--sub)">아직 제출하지 않았어요.</li>`;
   const verOpts = [`<option value="main">작성 중 (최신 저장본)</option>`]
     .concat(s.list.slice().reverse().map(r => `<option value="${esc(r.tag)}">v${r.version} 제출본 (${fmt(r.published_at)})</option>`)).join("");
@@ -342,7 +345,7 @@ function viewDetail(n, repo){
           <a class="btn primary" href="${releaseUrl(st, w.week, s.next)}" target="_blank" rel="noopener">📮 ${w.week}주차 v${s.next} 제출하기</a>
           <a class="btn" id="printBtn" href="#">🖨 출력</a>
           <a class="btn" href="${hubUrl(st)}" target="_blank" rel="noopener">✏️ 학생 작업실</a>
-          <a class="btn" href="${gameUrl(st)}" target="_blank" rel="noopener">🎮 게임 보기</a>
+          <a class="btn" href="${hubUrl(st)}versions.html" target="_blank" rel="noopener">🎮 게임 보기 (버전별)</a>
           <a class="btn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 내 저장소</a>
         </div>
         <p class="hint">제출하기 → GitHub 화면 맨 아래 초록색 <b>Publish release</b>를 누르면 제출 완료! 메인 사이트에는 최대 1시간 뒤에 표시돼요.</p>
