@@ -196,7 +196,8 @@ function state(repo, week){
   if(!last) return {cls:"", text:"미제출", list, last:null, next:1};
   return {cls: last.version >= 2 ? "v2" : "v1", text:`v${last.version} 제출`, list, last, next:last.version+1};
 }
-function gameUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/`; }
+function gameUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/play/`; }
+function hubUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/`; }
 function repoUrl(st){ return `https://github.com/${S.cfg.org}/${st.repo}`; }
 function rawUrl(st, ref, path){ return `https://raw.githubusercontent.com/${S.cfg.org}/${st.repo}/${ref}/${path}`; }
 function releaseUrl(st, week, v){
@@ -340,6 +341,7 @@ function viewDetail(n, repo){
         <div class="btns">
           <a class="btn primary" href="${releaseUrl(st, w.week, s.next)}" target="_blank" rel="noopener">📮 ${w.week}주차 v${s.next} 제출하기</a>
           <a class="btn" id="printBtn" href="#">🖨 출력</a>
+          <a class="btn" href="${hubUrl(st)}" target="_blank" rel="noopener">✏️ 학생 작업실</a>
           <a class="btn" href="${gameUrl(st)}" target="_blank" rel="noopener">🎮 게임 보기</a>
           <a class="btn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 내 저장소</a>
         </div>
