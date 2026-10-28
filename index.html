@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script src="town.js"></script>
+<script src="write.js"></script>
 <style>
 :root{
   --bg:#f2f3f5; --card:#fff; --ink:#111; --sub:#666; --line:#e3e5e8;
@@ -140,6 +141,49 @@ table.status a.badge:hover{filter:brightness(.95)}
 .sheet .md h1{font-size:22px}
 .sheet .md blockquote.howto{display:none}
 
+/* write (작성하기) */
+.wr-key{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px}
+.wr-key.on{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px;background:var(--ok-bg);border-color:#bfe5cc;font-size:14px}
+.wr-key.on span{flex:1;min-width:200px}
+.wr-key.on .hint{flex-basis:100%;margin:0}
+.wr-key-title{font-weight:800;margin-bottom:4px}
+.wr-key-row{display:flex;gap:8px}
+.wr-key-row input{flex:1;min-width:0;font:inherit;border:1px solid #cfd3d8;border-radius:10px;padding:9px 12px}
+.wr-remember{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);margin-top:8px}
+.wr .wr-raw > :first-child{margin-top:0}
+.wr-label{font-weight:700;margin:10px 0 4px}
+.wr-label p{margin:0}
+.wr-in,.wr-cell{display:block;width:100%;font:inherit;line-height:1.5;color:var(--ink);background:#fffaf5;border:1.5px solid #f0d9c6;border-radius:10px;padding:8px 12px;resize:none;overflow:hidden;min-height:40px}
+.wr-in:focus,.wr-cell:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px #ffe3d1}
+.wr-in::placeholder,.wr-cell::placeholder{color:#b9a999}
+.wr-in.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+.wr-ans{margin:6px 0 14px}
+.wr-field{display:grid;grid-template-columns:minmax(90px,auto) 1fr;align-items:center;gap:10px;margin:8px 0}
+.wr-field .wr-label{margin:0}
+.wr-list,.wr-code{margin:6px 0 12px}
+.wr-chk{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.wr-chk input{width:18px;height:18px;accent-color:var(--accent)}
+.wr-table{overflow-x:auto;margin:8px 0 14px}
+.wr-table table{border-collapse:collapse;width:100%;min-width:480px}
+.wr-table th,.wr-table td{border:1px solid #d5d8dc;padding:6px 8px;text-align:left;vertical-align:middle}
+.wr-table th{background:#f4f5f7;font-size:14px}
+.wr-table td.ro{background:#fafafa;font-size:14px;white-space:nowrap}
+.wr-table td.ex{color:#8a8f98}
+.wr-table td.in{padding:4px}
+.wr-table .wr-cell{border-color:transparent;background:#fffaf5;min-height:36px;padding:6px 8px}
+.wr-add{margin-top:6px;border:1px dashed #cfd3d8;background:#fff;border-radius:8px;padding:5px 12px;font-size:13px;color:var(--sub)}
+.wr-add:hover{border-color:var(--accent);color:var(--accent)}
+.wr-bar{position:sticky;bottom:12px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px;padding:10px 12px;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+.wr-status{flex:1;min-width:160px;font-size:13.5px;color:var(--sub);margin:0}
+.wr-status.ok{color:var(--ok);font-weight:600}
+.wr-status.warn{color:#c2410c;font-weight:600}
+.wr-status.err{color:#dc2626;font-weight:600}
+.wr-modal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.4);display:grid;place-items:center;padding:16px}
+.wr-dialog{width:min(520px,100%);background:#fff;border-radius:var(--radius);padding:22px 24px}
+.wr-dialog h3{margin:0 0 8px;font-size:19px}
+.wr-dialog p{margin:0 0 10px;color:#333}
+.wr-dialog .wr-in{overflow:auto}
+@media (max-width:760px){.wr-field{grid-template-columns:1fr;gap:2px}.wr-bar{bottom:6px}}
 
 /* town */
 .town-wrap{background:#1b1838;border-radius:var(--radius);padding:16px 16px 12px;color:#ecebff}
@@ -361,8 +405,9 @@ function startTown(scene, repo){
   const data = { students:S.students, done:doneCount, label, week:findWeek, state };
   const open = u => window.open(u, "_blank", "noopener");
   const arcade = v => Town.openArcade(`${hubUrl(st)}versions.html${v ? "?v="+encodeURIComponent(v) : ""}`, `${label(st)}의 게임`);
-  const writeMenu = (w, back) => w.docs.length === 1 ? open(editUrl(st, w.docs[0].path))
-    : Town.say([`${w.week}주차 · 어떤 글을 쓸까요?`], w.docs.map(d => ({label:d.name, fn:() => open(editUrl(st, d.path))})).concat([{label:"그만두기"}]));
+  const writeAt = (w, i) => { location.hash = `#/write/${w.week}/${st.repo}/${i}`; };
+  const writeMenu = (w, back) => w.docs.length === 1 ? writeAt(w, 0)
+    : Town.say([`${w.week}주차 · 어떤 글을 쓸까요?`], w.docs.map((d, i) => ({label:d.name, fn:() => writeAt(w, i)})).concat([{label:"그만두기"}]));
   const actions = {
     houseInfo: i => { const s = S.students[i]; if(!s) return null; const n = doneCount(s.repo);
       return { title:`🏠 ${label(s)}의 집`, sub: n ? `지금까지 ${n}개 주차를 제출했어요. 들어가 볼까요?` : "아직 제출한 주차가 없어요. 들어가 볼까요?" }; },
@@ -374,7 +419,7 @@ function startTown(scene, repo){
       const line2 = s.last ? `${s.text} · ${fmtFull(s.last.published_at)}${s.list.length > 1 ? ` (제출 ${s.list.length}회)` : ""}` : "아직 제출하지 않은 빈 액자예요.";
       const ch = [ {label:"📄 문서 보기", fn:() => { location.hash = `#/week/${n}/${st.repo}`; }},
                    {label:"✏️ 작성하기", fn:() => writeMenu(w)},
-                   {label:`📮 v${s.next} 제출하기`, fn:() => open(releaseUrl(st, n, s.next))} ];
+                   {label:`📮 v${s.next} 제출하기`, fn:() => { location.hash = `#/write/${n}/${st.repo}/0`; }} ];
       if(w.game && s.last) ch.push({label:"🎮 이 주차 게임 플레이", fn:() => arcade(s.last.tag)});
       ch.push({label:"닫기"});
       Town.say([`🖼️ ${n}주차 · ${w.title}`, line2], ch); },
@@ -422,13 +467,13 @@ function viewDetail(n, repo){
         <p class="topic">${w.week}주차 · ${esc(w.title)} — 성과물: ${esc(w.output)}</p>
         <ul class="history">${hist}</ul>
         <div class="btns">
-          <a class="btn primary" href="${releaseUrl(st, w.week, s.next)}" target="_blank" rel="noopener">📮 ${w.week}주차 v${s.next} 제출하기</a>
+          <a class="btn primary" href="#/write/${w.week}/${esc(st.repo)}/0">✏️ 작성하기 · 제출하기</a>
           <a class="btn" id="printBtn" href="#">🖨 출력</a>
           <a class="btn" href="${hubUrl(st)}" target="_blank" rel="noopener">✏️ 학생 작업실</a>
           <a class="btn" href="${hubUrl(st)}versions.html" target="_blank" rel="noopener">🎮 게임 보기 (버전별)</a>
           <a class="btn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 내 저장소</a>
         </div>
-        <p class="hint">제출하기 → GitHub 화면 맨 아래 초록색 <b>Publish release</b>를 누르면 제출 완료! 메인 사이트에는 최대 1시간 뒤에 표시돼요.</p>
+        <p class="hint">작성하기 화면에서 <b>저장하기</b>로 저장하고, 다 쓰면 <b>제출하기</b>를 누르세요. 메인 사이트에는 최대 1시간 뒤에 표시돼요.</p>
       </div>
     </div>
     <div class="doc-bar">
@@ -516,6 +561,7 @@ async function loadPrintDocs(){
 /* ---------- router ---------- */
 function parse(){
   const p = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  if(p[0] === "write" && p[2]) return {name:"write", week:p[1], repo:p[2], doc:p[3]||0};
   if(p[0] === "week" && p[2]) return {name:"detail", week:p[1], repo:p[2]};
   if(p[0] === "week") return {name:"week", week:p[1]};
   if(p[0] === "status") return {name:"status"};
@@ -524,6 +570,12 @@ function parse(){
   return {name:"home"};
 }
 function route_(){
+  if(S.bounce){ S.bounce = false; return; }
+  if(window.Writer && Writer.isDirty() && location.hash !== S.lastHash){
+    if(!confirm("저장하지 않은 내용이 있어요. 저장하지 않고 나갈까요?")){ S.bounce = true; location.hash = S.lastHash; return; }
+    Writer.reset();
+  }
+  S.lastHash = location.hash;
   const r = parse(); renderSide(r);
   const main = $("#main");
   if(window.Town) Town.stop();
@@ -532,6 +584,7 @@ function route_(){
   if(r.name === "house"){ main.innerHTML = tog + viewTown("house", r.repo); startTown("house", r.repo); }
   if(r.name === "week") main.innerHTML = tog + viewWeek(r.week);
   if(r.name === "status") main.innerHTML = tog + viewStatus();
+  if(r.name === "write"){ main.innerHTML = tog + Writer.view(r.week, r.repo, r.doc); Writer.mount(r.week, r.repo, r.doc); }
   if(r.name === "print"){ main.innerHTML = tog + viewPrint(r.week, r.repos, r.ver, r.doc); loadPrintDocs(); }
   if(r.name === "detail"){
     main.innerHTML = tog + viewDetail(r.week, r.repo);

@@ -11,6 +11,21 @@
 | `weeks.json` | 주차별 주제, 성과물, 볼 문서 |
 | `data/submissions.json` | 제출 기록. Actions가 자동으로 추가만 해요. **직접 고치지 마세요** |
 
+## 작성하기 (사이트에서 바로 저장)
+- 학생은 사이트의 **✏️ 작성하기**(마을의 책상·액자, 학생 주차 페이지)에서 양식에 바로 적고 **💾 저장하기**를 누르면 자기 저장소의 md 파일에 저장돼요.
+- **📮 제출하기**를 누르면 지금 저장된 내용이 `week2-v1` 형식의 릴리스로 제출돼요. 버전 번호는 자동으로 다음 번호가 붙어요.
+- 저장하려면 학생마다 **열쇠(fine-grained 토큰)**가 필요해요. 처음 한 번 붙여 넣으면 되고, 공용 컴퓨터에서는 '이 컴퓨터에 기억하기'를 끄거나 다 쓴 뒤 **열쇠 빼기**를 누르세요.
+
+### 열쇠 만드는 법 (학생 1명당 1개)
+1. https://github.com/settings/personal-access-tokens/new 에 들어가요.
+2. **Token name**: `game-01 작성용`처럼 학생 저장소 이름을 넣어요. **Expiration**: 과정이 끝나는 날짜로 정해요.
+3. **Resource owner**: `Ongo-gamedev2026`
+4. **Repository access**: *Only select repositories* → 그 학생의 저장소 **하나만** 골라요.
+5. **Permissions → Repository permissions → Contents**: *Read and write*
+6. **Generate token**을 누르고 나온 `github_pat_…` 값을 그 학생에게만 전해 줘요. (이 화면을 벗어나면 다시 볼 수 없어요)
+
+처음 한 번은 조직 설정에서 fine-grained 토큰을 허용해야 할 수 있어요: **조직 Settings → Personal access tokens → Settings → Allow access via fine-grained personal access tokens**. '승인 필요'로 두면 만든 열쇠를 **Pending requests**에서 승인해야 써져요.
+
 ## 제출 기록
 - `.github/workflows/collect.yml`이 매시간 학생 저장소의 릴리스(`week2-v1` 형식)를 확인해요.
 - 바로 반영하려면 **Actions → 제출 기록 모으기 → Run workflow**를 누르세요.
