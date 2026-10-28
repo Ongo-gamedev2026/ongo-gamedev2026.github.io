@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="town.js"></script>
 <style>
 :root{
   --bg:#f2f3f5; --card:#fff; --ink:#111; --sub:#666; --line:#e3e5e8;
@@ -139,6 +140,28 @@ table.status a.badge:hover{filter:brightness(.95)}
 .sheet .md h1{font-size:22px}
 .sheet .md blockquote.howto{display:none}
 
+
+/* town */
+.town-wrap{background:#1b1838;border-radius:var(--radius);padding:16px 16px 12px;color:#ecebff}
+.town-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:12px}
+.town-head h1{font-size:21px;margin:0;color:#fff}
+.town-sub{color:#a8a4d6;font-size:13px}
+.town-btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.tbtn{border:1px solid #3d3875;background:#262256;color:#fff;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:600}
+.tbtn:hover{background:#332e6e}
+#town{display:block;width:100%;height:auto;image-rendering:pixelated;border-radius:10px;touch-action:none;outline:none;background:#000}
+.town-wrap.house #town{max-width:760px;margin:0 auto}
+.town-help{margin:10px 2px 0;font-size:13px;color:#a8a4d6;text-align:center}
+.town-help b{color:#fff}
+.town-scroll{overflow-x:auto;border-radius:10px}
+@media (max-width:760px){.town-scroll #town{width:760px;max-width:none}.town-wrap{padding:12px 10px}}
+#arcadeBox{position:fixed;inset:0;z-index:60;background:rgba(5,4,15,.72);display:grid;place-items:center;padding:16px}
+.arcade-panel{width:min(980px,96vw);height:min(88vh,780px);background:#0d0b1e;border:3px solid #e9ecff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.arcade-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;color:#fff;background:#1b1838;font-size:15px}
+.arcade-top span{display:flex;gap:10px;align-items:center}
+.arcade-top a{color:#9fe8ff;font-size:13.5px}
+.arcade-top button{border:1px solid #3d3875;background:#262256;color:#fff;border-radius:8px;padding:5px 10px;font-size:13px}
+.arcade-panel iframe{flex:1;border:0;width:100%;background:#0d0b1e}
 @media (max-width:1100px){.strip{grid-auto-columns:calc((100% - 24px)/2)}}
 @media (max-width:760px){
   .app{display:block}
@@ -197,8 +220,8 @@ function state(repo, week){
   if(!last) return {cls:"", text:"미제출", list, last:null, next:1};
   return {cls: last.version >= 2 ? "v2" : "v1", text:`v${last.version} 제출`, list, last, next:last.version+1};
 }
-function gameUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/play/`; }
-function hubUrl(st){ return `${S.cfg.pagesBase}/${st.repo}/`; }
+function gameUrl(st){ return `/${st.repo}/play/`; }
+function hubUrl(st){ return `/${st.repo}/`; }
 function repoUrl(st){ return `https://github.com/${S.cfg.org}/${st.repo}`; }
 function rawUrl(st, ref, path){ return `https://raw.githubusercontent.com/${S.cfg.org}/${st.repo}/${ref}/${path}`; }
 function releaseUrl(st, week, v){
@@ -248,7 +271,7 @@ function renderSide(route){
   $("#side").innerHTML = `
     <a class="brand" href="#/">🎮 온고 게임제작반<small>2026 · AI 게임 만들기</small></a>
     <nav class="nav">
-      <a href="#/" class="${route.name==="home"?"on":""}">🏠 홈</a>
+      <a href="#/" class="${route.name==="home"||route.name==="house"?"on":""}">🏡 마을 (홈)</a>
       <hr>
       ${wk}
       <hr>
@@ -297,20 +320,63 @@ function card(st, w){
 }
 function countDone(w){ return S.students.filter(st => subs(st.repo, w.week).length).length; }
 
-function viewHome(){
-  const upd = S.updated ? `제출 기록 갱신: ${new Date(S.updated).toLocaleString("ko-KR")}` : "아직 제출 기록이 없어요";
-  return `<div class="hero"><h1>주차별 제출 현황</h1><p>${esc(upd)}</p></div>` +
-    S.weeks.map(w => `
-    <section class="row">
-      <div class="row-head">
-        <h2>${w.week}주차 · ${esc(w.title)} <em>${countDone(w)}/${S.students.length}</em></h2>
-        <span class="grow"></span>
-        <a class="more" href="#/week/${w.week}">더보기</a>
-        <button class="arrow prev" data-scroll="-1" aria-label="이전">‹</button>
-        <button class="arrow" data-scroll="1" aria-label="다음">›</button>
-      </div>
-      <div class="strip">${S.students.map(st => card(st, w)).join("")}</div>
-    </section>`).join("");
+
+/* ---------- 마을 / 학생 집 ---------- */
+function editUrl(st, path){ return `${repoUrl(st)}/edit/main/${path}`; }
+function doneCount(repo){ return S.weeks.filter(w => subs(repo, w.week).length).length; }
+function viewTown(scene, repo){
+  if(scene === "house"){
+    const st = findStu(repo); if(!st) return `<div class="empty">없는 학생 집이에요.</div>`;
+    return `<div class="town-wrap house">
+      <div class="town-head"><h1>🏠 ${esc(label(st))}의 작업실</h1>
+        <span class="town-btns"><a class="tbtn" href="#/">← 마을로</a><button class="tbtn" id="tArcade">🎮 게임기</button><a class="tbtn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 저장소</a></span></div>
+      <canvas id="town" tabindex="0" aria-label="${esc(label(st))}의 작업실"></canvas>
+      <p class="town-help">⬅️➡️⬆️⬇️ / WASD 이동 · <b>Space</b> 조사하기 · 화면을 눌러도 이동해요 · 위쪽 <b>액자</b> = 1~6주차 전시 · <b>게임기</b> = 내 게임 · <b>책상</b> = 과제 쓰기 · 아래 <b>문</b> = 마을로</p>
+    </div>`;
+  }
+  return `<div class="town-wrap">
+    <div class="town-head"><h1>🏡 온고 게임 마을</h1><span class="town-sub">${S.updated ? "제출 기록 갱신: " + esc(new Date(S.updated).toLocaleString("ko-KR")) : "아직 제출 기록이 없어요"}</span></div>
+    <div class="town-scroll"><canvas id="town" tabindex="0" aria-label="온고 게임 마을"></canvas></div>
+    <p class="town-help">⬅️➡️⬆️⬇️ / WASD 이동 · <b>Space</b> 조사하기 · 집이나 건물을 누르면 그 앞까지 걸어가요 · 굴뚝 연기와 ★ = 제출한 주차 수</p>
+  </div>`;
+}
+function startTown(scene, repo){
+  const cv = $("#town"); if(!cv || !window.Town) return;
+  const st = repo ? findStu(repo) : null; if(scene === "house" && !st) return;
+  const idx = st ? stuIdx(st) : -1;
+  const data = { students:S.students, done:doneCount, label, week:findWeek, state };
+  const open = u => window.open(u, "_blank", "noopener");
+  const arcade = v => Town.openArcade(`${hubUrl(st)}versions.html${v ? "?v="+encodeURIComponent(v) : ""}`, `${label(st)}의 게임`);
+  const writeMenu = (w, back) => w.docs.length === 1 ? open(editUrl(st, w.docs[0].path))
+    : Town.say([`${w.week}주차 · 어떤 글을 쓸까요?`], w.docs.map(d => ({label:d.name, fn:() => open(editUrl(st, d.path))})).concat([{label:"그만두기"}]));
+  const actions = {
+    houseInfo: i => { const s = S.students[i]; if(!s) return null; const n = doneCount(s.repo);
+      return { title:`🏠 ${label(s)}의 집`, sub: n ? `지금까지 ${n}개 주차를 제출했어요. 들어가 볼까요?` : "아직 제출한 주차가 없어요. 들어가 볼까요?" }; },
+    enterHouse: i => { location.hash = `#/house/${S.students[i].repo}`; },
+    openMaterials: () => open(S.cfg.materialsUrl),
+    boardText: () => "제출 인원 · " + S.weeks.map(w => `${w.week}주 ${countDone(w)}/${S.students.length}`).join("  "),
+    openStatus: () => { location.hash = "#/status"; },
+    frame: n => { const w = findWeek(n), s = state(st.repo, n);
+      const line2 = s.last ? `${s.text} · ${fmtFull(s.last.published_at)}${s.list.length > 1 ? ` (제출 ${s.list.length}회)` : ""}` : "아직 제출하지 않은 빈 액자예요.";
+      const ch = [ {label:"📄 문서 보기", fn:() => { location.hash = `#/week/${n}/${st.repo}`; }},
+                   {label:"✏️ 작성하기", fn:() => writeMenu(w)},
+                   {label:`📮 v${s.next} 제출하기`, fn:() => open(releaseUrl(st, n, s.next))} ];
+      if(w.game && s.last) ch.push({label:"🎮 이 주차 게임 플레이", fn:() => arcade(s.last.tag)});
+      ch.push({label:"닫기"});
+      Town.say([`🖼️ ${n}주차 · ${w.title}`, line2], ch); },
+    arcade: () => Town.say(["🎮 게임기예요. 내 게임을 버전별로 플레이할 수 있어요."], [{label:"▶ 플레이", fn:() => arcade()}, {label:"⬆️ 게임 올리기", fn:() => open(`${repoUrl(st)}/upload/main/play`)}, {label:"그만두기"}]),
+    desk: () => Town.say(["✏️ 책상이에요. 무엇을 할까요?"], [
+      {label:"과제 쓰기", fn:() => Town.say(["몇 주차 과제를 쓸까요?"], S.weeks.map(w => ({label:`${w.week}주차 · ${w.docs[0].name}${w.docs.length>1?" 외":""}`, fn:() => writeMenu(w)})).concat([{label:"그만두기"}]))},
+      {label:"⬆️ 게임 올리기", fn:() => open(`${repoUrl(st)}/upload/main/play`)},
+      {label:"📁 내 저장소 열기", fn:() => open(repoUrl(st))},
+      {label:"그만두기"}])
+  };
+  const from = S.townFrom; S.townFrom = undefined;
+  Town.start(cv, { scene, data, actions, repo, idx, from,
+    intro: scene === "house" ? [`${label(st)}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."] : null,
+    onExit: () => { S.townFrom = idx; location.hash = "#/"; } });
+  const ab = $("#tArcade"); if(ab) ab.onclick = () => arcade();
+  cv.focus({preventScroll:true});
 }
 
 function viewWeek(n){
@@ -439,14 +505,17 @@ function parse(){
   if(p[0] === "week" && p[2]) return {name:"detail", week:p[1], repo:p[2]};
   if(p[0] === "week") return {name:"week", week:p[1]};
   if(p[0] === "status") return {name:"status"};
+  if(p[0] === "house" && p[1]) return {name:"house", repo:p[1]};
   if(p[0] === "print") return {name:"print", week:p[1], repos:p[2]||"", ver:p[3]||"latest", doc:p[4]||0};
   return {name:"home"};
 }
 function route_(){
   const r = parse(); renderSide(r);
   const main = $("#main");
+  if(window.Town) Town.stop();
   const tog = `<button class="btn menu-toggle" onclick="document.getElementById('side').classList.add('show')">☰ 메뉴</button>`;
-  if(r.name === "home") main.innerHTML = tog + viewHome();
+  if(r.name === "home"){ main.innerHTML = tog + viewTown("village"); startTown("village"); }
+  if(r.name === "house"){ main.innerHTML = tog + viewTown("house", r.repo); startTown("house", r.repo); }
   if(r.name === "week") main.innerHTML = tog + viewWeek(r.week);
   if(r.name === "status") main.innerHTML = tog + viewStatus();
   if(r.name === "print"){ main.innerHTML = tog + viewPrint(r.week, r.repos, r.ver, r.doc); loadPrintDocs(); }
