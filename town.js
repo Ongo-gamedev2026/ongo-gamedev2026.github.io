@@ -226,7 +226,7 @@ function onKey(e, down){
   const d = DIRS[e.code];
   if (d !== undefined){ e.preventDefault();
     if (down){ if (g.dialog){ if (g.dialog.choices && (d===0||d===3)) moveSel(d===0?1:-1); return; }
-      g.path = null; if (!g.keys.includes(d)) g.keys.push(d); }
+      g.path = null; g.tap = d; if (!g.keys.includes(d)) g.keys.push(d); }
     else g.keys = g.keys.filter(k => k!==d);
     return; }
   if (!down) return;
@@ -246,7 +246,7 @@ function update(g, now){
     return;
   }
   if (g.dialog) return;
-  let d = g.keys.length ? g.keys[g.keys.length-1] : null;
+  let d = g.keys.length ? g.keys[g.keys.length-1] : (g.tap ?? null); g.tap = null;
   if (d === null && g.path && g.path.length){
     const [nx, ny] = g.path[0];
     d = DV.findIndex(([dx,dy]) => p.x+dx===nx && p.y+dy===ny);

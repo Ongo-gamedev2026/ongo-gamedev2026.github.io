@@ -239,7 +239,7 @@ function goHouse(i){ if (!STUDENTS[i]) return; lastHouse = i; currentHouse = i; 
 document.getElementById("exitBtn").onclick = () => goVillage();
 
 const STEP = 0.17;
-let knock = false;
+let knock = false, tap = null;
 function step(now){
   if (P.moving){
     const k = Math.min(1, (now - P.moving.t) / (STEP*1000));
@@ -248,7 +248,7 @@ function step(now){
     return;
   }
   if (dialog) return;
-  let d = keys.length ? keys[keys.length-1] : null;
+  let d = keys.length ? keys[keys.length-1] : tap; tap = null;
   if (d === null && path){
     if (!path.length){ const o = pathObj; path = null; pathObj = null; if (o){ P.dir = o.door || o.face ? 3 : DV.findIndex(([dx,dy]) => objAt(P.x+dx,P.y+dy) === o); if (P.dir < 0) P.dir = 3; interact(); } return; }
     const [nx,ny] = path.shift(); d = DV.findIndex(([dx,dy]) => P.x+dx===nx && P.y+dy===ny); if (d < 0){ path = null; return; }
@@ -306,7 +306,7 @@ addEventListener("keydown", e => {
   const d = DIRS[e.code];
   if (d !== undefined){ e.preventDefault();
     if (dialog){ if (dialog.choices && (d===0||d===3)){ dialog.sel = (dialog.sel + (d===0?1:-1) + dialog.choices.length) % dialog.choices.length; renderCh(); } return; }
-    path = null; if (!keys.includes(d)) keys.push(d); return; }
+    path = null; tap = d; if (!keys.includes(d)) keys.push(d); return; }
   if (e.code === "Space" || e.code === "Enter"){ e.preventDefault(); dialog ? (dialog.choices ? confirmDlg() : closeDlg()) : interact(); }
   if (e.code === "Escape" && dialog) closeDlg();
 });
@@ -349,7 +349,7 @@ function frame(now){
   const walk = P.moving ? Math.sin(now/55) : 0; const ud = player.userData;
   ud.body.position.y = Math.abs(walk) * .06; ud.legs[0].position.z = walk*.1; ud.legs[1].position.z = -walk*.1;
   // 카메라: 마을은 플레이어를 따라가고, 방은 방 전체가 보이게
-  if (mode === "village"){ tmp.set(wx*.55, 17, wz*.55 + 15); camera.position.lerp(tmp, .08); camera.lookAt(wx*.55, 0, wz*.55 - 1); }
+  if (mode === "village"){ tmp.set(wx*.5, 21, wz*.5 + 18); camera.position.lerp(tmp, .08); camera.lookAt(wx*.5, 0, wz*.5 - 1); }
   else { camera.position.set(0, 13, 11.5); camera.lookAt(0, 0, .6); }
   smoke.forEach(sm => sm.puffs.forEach((p, k) => { const t = ((now/1600) + k/3) % 1; p.position.set(sm.base.x + Math.sin(t*6+k)*.15, sm.base.y + t*1.6, sm.base.z); p.scale.setScalar(.6 + t*1.2); p.material.opacity = .7*(1-t); }));
   renderer.render(scene, camera);
