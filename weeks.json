@@ -21,10 +21,6 @@
         {
           "name": "게임 기획서",
           "path": "docs/week2-plan.md"
-        },
-        {
-          "name": "2주차 개발일지",
-          "path": "devlog/week02.md"
         }
       ],
       "game": false
