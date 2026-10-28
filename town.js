@@ -260,7 +260,16 @@ function update(g, now){
   if (d === null) return;
   p.dir = d;
   const nx = p.x + DV[d][0], ny = p.y + DV[d][1];
-  if (blocked(g, nx, ny)){ if (g.path) g.path = null; return; }
+  if (blocked(g, nx, ny)){
+    if (g.path){ g.path = null; return; }
+    // 문 앞에서 ↑ 키를 누르면 바로 들어가요
+    const o = d === 3 ? objAt(g, nx, ny) : null;
+    if (o && o.door && nx === o.door[0] && ny === o.door[1] && !g.knock){
+      g.keys = []; g.knock = true; setTimeout(() => { g.knock = false; }, 400);
+      if (o.kind === "house" && g.opts.actions.houseInfo(o.idx)) g.opts.actions.enterHouse(o.idx);
+      else interact();
+    }
+    return; }
   p.moving = { sx:p.x, sy:p.y, t:now, alt:!(p.moving && p.moving.alt) && !p.lastAlt };
   p.lastAlt = p.moving.alt; p.x = nx; p.y = ny;
 }
