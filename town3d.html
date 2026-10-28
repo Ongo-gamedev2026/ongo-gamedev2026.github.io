@@ -233,8 +233,8 @@ function enter(start){
   P.x = start.x; P.y = start.y; P.dir = start.dir; P.fx = P.x; P.fy = P.y; P.moving = null; P.rot = [0,-Math.PI/2,Math.PI/2,Math.PI][P.dir];
   player = makePlayer(); keys.length = 0; path = null;
 }
-function goVillage(){ mode = "village"; enter(buildVillage()); document.getElementById("exitBtn").style.display = "none"; document.getElementById("title").textContent = "🏡 온고 게임 마을 3D"; }
-function goHouse(i){ if (!STUDENTS[i]) return; lastHouse = i; currentHouse = i; mode = "house"; enter(buildRoom(i)); document.getElementById("exitBtn").style.display = ""; document.getElementById("title").textContent = `🏠 ${label(STUDENTS[i])}의 작업실`;
+function goVillage(){ mode = "village"; enter(buildVillage().start); document.getElementById("exitBtn").style.display = "none"; document.getElementById("title").textContent = "🏡 온고 게임 마을 3D"; }
+function goHouse(i){ if (!STUDENTS[i]) return; lastHouse = i; currentHouse = i; mode = "house"; enter(buildRoom(i).start); document.getElementById("exitBtn").style.display = ""; document.getElementById("title").textContent = `🏠 ${label(STUDENTS[i])}의 작업실`;
   say([`${label(STUDENTS[i])}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."]); }
 document.getElementById("exitBtn").onclick = () => goVillage();
 
