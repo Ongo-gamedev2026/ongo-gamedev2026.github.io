@@ -193,6 +193,7 @@ table.status a.badge:hover{filter:brightness(.95)}
 .town-btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tbtn{border:1px solid #3d3875;background:#262256;color:#fff;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:600}
 .tbtn:hover{background:#332e6e}
+.tbtn.on{background:#16a34a;border-color:#16a34a}
 #town{display:block;width:100%;height:auto;margin:0 auto;image-rendering:pixelated;border-radius:10px;touch-action:none;outline:none;background:#000}
 .town-help{margin:10px 2px 0;font-size:13px;color:#a8a4d6;text-align:center}
 .town-help b{color:#fff}
@@ -373,7 +374,7 @@ function viewTown(scene, repo){
     const st = findStu(repo); if(!st) return `<div class="empty">없는 학생 집이에요.</div>`;
     return `<div class="town-wrap house">
       <div class="town-head"><h1>🏠 ${esc(label(st))}의 작업실</h1>
-        <span class="town-btns"><a class="tbtn" href="#/">← 마을로</a><button class="tbtn" id="tArcade">🎮 게임기</button><a class="tbtn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 저장소</a></span></div>
+        <span class="town-btns"><a class="tbtn" href="#/">← 마을로</a><button class="tbtn" id="tArcade">🎮 게임기</button><button class="tbtn" id="tKey">🔑 내 열쇠</button><a class="tbtn" href="${repoUrl(st)}" target="_blank" rel="noopener">📁 저장소</a></span></div>
       <canvas id="town" tabindex="0" aria-label="${esc(label(st))}의 작업실"></canvas>
       <p class="town-help">⬅️➡️⬆️⬇️ / WASD 이동 · <b>Space</b> 조사하기 · 화면을 눌러도 이동해요 · 위쪽 <b>액자</b> = 1~6주차 전시 · <b>게임기</b> = 내 게임 · <b>책상</b> = 과제 쓰기 · 아래 <b>문</b> = 마을로</p>
     </div>`;
@@ -435,6 +436,9 @@ function startTown(scene, repo){
     intro: scene === "house" ? [`${label(st)}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."] : null,
     onExit: () => { S.townFrom = idx; location.hash = "#/"; } });
   const ab = $("#tArcade"); if(ab) ab.onclick = () => arcade();
+  const kb = $("#tKey");
+  if(kb && st){ const mark = on => { kb.textContent = on ? "🔑 열쇠 연결됨" : "🔑 내 열쇠"; kb.classList.toggle("on", on); };
+    mark(Writer.hasKey(st.repo)); kb.onclick = () => Writer.keyDialog(st.repo, on => { mark(on); cv.focus({preventScroll:true}); }); }
   fitTown(); cv.focus({preventScroll:true});
 }
 

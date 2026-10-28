@@ -1,0 +1,46 @@
+{
+  "_안내": "학생 열쇠를 학생별 코드로 잠가 둔 것이에요. 코드 없이는 열 수 없어요. 직접 고치지 마세요.",
+  "iter": 300000,
+  "keys": {
+    "game-01": {
+      "salt": "eDW4DVJ82Q3Or6GPf8VRDQ==",
+      "iv": "ltURloH1Js50tTTT",
+      "ct": "EFh+YRmCthz+862OaK1FzsfQcMKyJBV7NDIGBibFWhNnDoPSSulnNlZg2cZ4QSB1r8hx0fc4NlpLL5Zgtn2uKxwCAH9/pDz/tbPRVcHXTbYJOTocmfI5pd9SYJIgyauYPTWAfIsZ/hcXxjAjZg=="
+    },
+    "game-02": {
+      "salt": "aosBGDvSPrmCr0Jx0Qlpgg==",
+      "iv": "QXffNpDzM1xMJJL6",
+      "ct": "1Aa4cHXSFaAizxv2rbXmJUph8o07lvUhDSCIO8g4RJH8+zcVfHgkkri5Wdqfl+x9RHQrxHLMCunEJcVK1NbZ2e8gQWZZ2eP5lvYNns74D6xg0ck5aUjRVb/UQB9JRdHOpzjvaF+8EY76VBC1wA=="
+    },
+    "game-03": {
+      "salt": "jxgM/DHODCE8J6QZEjU73A==",
+      "iv": "H4kqsDPesksRwUMi",
+      "ct": "JC5y2HsEZAXXKISNYByKpFnlbsPIaG5fxk15PA0+xvyAIcp1130iB5a1PSg8VEFc1nOxtXC/QblbsJwbjAAdrPzuqSA0f+OMWr3PukQjixDJ5mlNbUSPXdJqt4XaL4UvxSjaIWyhv2jEuin6aA=="
+    },
+    "game-04": {
+      "salt": "OVDW4AtoMiYwc9j4oMRHGQ==",
+      "iv": "+5cZVMictCO/FvYI",
+      "ct": "m49HtUdvOQT0pIa93bxb9CxmWPCfEnrkOaKHrfcZhi422wMNQsFTGQSUOlTID2bzru9Fw9hzAsOSstIJGqe71vroZnzfVwTfx9hpx5uJ9u5eDRNcvmk9Pz0JAMwtCmbH+OWKc65ouVt+y3tD7Q=="
+    },
+    "game-05": {
+      "salt": "MRyWPniGwIQUlHjYY1uE7w==",
+      "iv": "Ypv4HH1xY5Of2ioK",
+      "ct": "3LL4yGyBW2rMe6l9V1yerY3L4TzuX7i1cUec3zphVDcBasmgxRZ7Kx1OiVFmDs8BBUU9o//+d0Owj0pfuZcjea1M+u/K2nEgaiusyNb1RzFAFbY+qZbvUbZxcT07BaMf7BiaJzTz0n3BMJ+eEw=="
+    },
+    "game-06": {
+      "salt": "NMQe9ghDxcPwgdJMGgtYGw==",
+      "iv": "iNv5XmbvQIbXNwsU",
+      "ct": "kOJTRMVkWkeSttJGDl3qB/r5LlJz2NeVBuWKo42h1yCxw1U4ebhtjOuJEh5EtnO6gt4VcRpBWQlhJd1Fs7Wtdic4h1MkI4teXthX1AjxG/AQgP6CiZbRP1/15YRk7rkMc19U4MgKXMo/lGrhOw=="
+    },
+    "game-07": {
+      "salt": "WVzKvKp/FniqzHGE2Da80Q==",
+      "iv": "+j2w3KfPWpZyMCay",
+      "ct": "9dYXEiRBxwZPCcBzydoEWgJCv/k84MMpLa3/vIUAGOUCJHemLiXbVaLmhEmPs7KtfHHTRzrl2MFDuHZXqN5FlOoTziX4aGwkeCbzOWQHe9S4LcK1Lqee4gLi9SuNBuCzU/MyocLylJf0dgHbxA=="
+    },
+    "game-08": {
+      "salt": "HlgdZt53B+NDWltKw8SVWQ==",
+      "iv": "LQiEZazbkj+u57TW",
+      "ct": "Ap3SYHBWiNsqYG1nGxmo35bYbA52zcgFbLr/TnUcp67ABIcy4WhDDmdA4mG0W8ZEIbWniO3id1ZGPdFeXHP6MrqQ1T9uh7jMGKZ6AC0OfTZZuGfU1yTLP4aum6t50+M8fD8euV1RwKxpwpV5KQ=="
+    }
+  }
+}

@@ -17,6 +17,32 @@ function setKey(repo, k, remember){
 function clearKey(repo){
   try{ sessionStorage.removeItem(keyName(repo)); localStorage.removeItem(keyName(repo)); }catch(_){}
 }
+/* 학생 코드(XXXX-XXXX)로 keys.json의 잠긴 열쇠를 풀어요 */
+const b64bytes = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+async function codeToKey(repo, code){
+  const c = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const r = await fetch("keys.json?t=" + Date.now()); if(!r.ok) throw new Error("열쇠 목록을 불러오지 못했어요.");
+  const j = await r.json(), e = j.keys && j.keys[repo];
+  if(!e) throw new Error("이 작업실에는 아직 열쇠가 없어요. 선생님께 알려 주세요.");
+  try{
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(c), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name:"PBKDF2", salt:b64bytes(e.salt), iterations:j.iter || 300000, hash:"SHA-256" }, base, { name:"AES-GCM", length:256 }, false, ["decrypt"]);
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name:"AES-GCM", iv:b64bytes(e.iv) }, key, b64bytes(e.ct)));
+  }catch(_){ throw new Error("코드가 맞지 않아요. 내 작업실이 맞는지, 코드를 정확히 넣었는지 확인해 주세요."); }
+}
+/* 코드나 열쇠를 받아 확인하고 저장해요. 성공하면 true, 실패하면 오류 문장을 던져요 */
+async function connect(repo, input, remember){
+  let k = input.trim(); if(!k) throw new Error("코드를 넣어 주세요.");
+  if(!/^github_pat_|^ghp_/.test(k)) k = await codeToKey(repo, k);
+  let r;
+  try{ r = await fetch(`${API}/repos/${S.cfg.org}/${repo}`, { headers:{ Authorization:"Bearer " + k, Accept:"application/vnd.github+json" }, cache:"no-store" }); }
+  catch(_){ throw new Error("확인하지 못했어요. 인터넷 연결을 확인해 주세요."); }
+  if(r.status === 401) throw new Error("열쇠 기간이 끝났거나 지워졌어요. 선생님께 알려 주세요.");
+  if(r.status === 404) throw new Error("이 열쇠로는 이 저장소에 들어갈 수 없어요.");
+  if(!r.ok) throw new Error("확인하지 못했어요. 잠시 뒤 다시 해 주세요.");
+  setKey(repo, k, remember); return true;
+}
+
 async function gh(path, opt = {}){
   const k = getKey(W.st.repo);
   const headers = { Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28", ...(opt.headers||{}) };
@@ -329,25 +355,19 @@ function drawKey(notice){
   }
   el.className = "wr-key";
   el.innerHTML = `<div class="wr-key-title">🔑 내 열쇠 넣기</div>
-    <p class="hint" style="margin:0 0 8px">선생님께 받은 열쇠(github_pat_로 시작)를 붙여 넣으면 이 화면에서 바로 저장·제출할 수 있어요.</p>
-    <div class="wr-key-row"><input type="password" autocomplete="off" placeholder="github_pat_…" aria-label="열쇠">
+    <p class="hint" style="margin:0 0 8px">선생님께 받은 <b>내 코드</b>(예: ABCD-1234)를 넣으면 이 화면에서 바로 저장·제출할 수 있어요.</p>
+    <div class="wr-key-row"><input type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-1234" aria-label="내 코드">
     <button class="btn primary" data-ok>확인</button></div>
     <label class="wr-remember"><input type="checkbox"> 이 컴퓨터에 기억하기 (내 컴퓨터일 때만 체크)</label>
     <p class="wr-status" data-msg>${esc(notice || "")}</p>`;
   const inp = el.querySelector("input"), msg = el.querySelector("[data-msg]");
   const go = async () => {
-    const k2 = inp.value.trim(); if(!k2) return;
-    msg.textContent = "열쇠를 확인하는 중…"; msg.className = "wr-status";
+    if(!inp.value.trim()) return;
+    msg.textContent = "코드를 확인하는 중…"; msg.className = "wr-status";
     try{
-      const r = await fetch(`${API}${repoPath()}`, { headers:{ Authorization:"Bearer " + k2, Accept:"application/vnd.github+json" }, cache:"no-store" });
-      if(r.status === 401){ msg.textContent = "열쇠가 맞지 않거나 기간이 끝났어요."; msg.className = "wr-status err"; return; }
-      if(r.status === 404){ msg.textContent = "이 열쇠로는 내 저장소에 들어갈 수 없어요. 저장소 이름을 확인해 주세요."; msg.className = "wr-status err"; return; }
-      if(!r.ok) throw new Error(r.status);
-      const j = await r.json();
-      if(j.permissions && j.permissions.push === false){ msg.textContent = "이 열쇠는 읽기만 돼요. 쓰기 권한이 있는 열쇠가 필요해요."; msg.className = "wr-status err"; return; }
-      setKey(W.st.repo, k2, el.querySelector(".wr-remember input").checked);
+      await connect(W.st.repo, inp.value, el.querySelector(".wr-remember input").checked);
       drawKey(); if(!W.dirty) load(); else setStatus("열쇠를 넣었어요. 이제 저장할 수 있어요", "ok");
-    }catch(e){ msg.textContent = "확인하지 못했어요. 인터넷 연결을 확인해 주세요."; msg.className = "wr-status err"; }
+    }catch(e){ msg.textContent = e.message; msg.className = "wr-status err"; }
   };
   el.querySelector("[data-ok]").onclick = go;
   inp.onkeydown = e => { if(e.key === "Enter") go(); };
@@ -378,5 +398,38 @@ function mount(n, repo, docIdx){
   document.getElementById("wrSubmit").onclick = openSubmit;
 }
 
-window.Writer = { view, mount, isDirty: () => W.dirty, reset: () => { W.dirty = false; }, _parse: parseMd, _toMd: segs => { W.segs = segs; return toMd(); } };
+/* 작업실(게임방)에서 코드 넣기 */
+function keyDialog(repo, onDone){
+  const has = !!getKey(repo);
+  const dlg = document.createElement("div"); dlg.className = "wr-modal";
+  dlg.innerHTML = `<div class="wr-dialog" role="dialog" aria-modal="true">
+    <h3>🔑 내 열쇠</h3>
+    ${has ? `<p>열쇠가 연결되어 있어요. 책상에서 과제를 쓰고 바로 저장·제출할 수 있어요.</p>
+      <div class="btns" style="justify-content:flex-end"><button class="btn" data-out>열쇠 빼기</button><button class="btn primary" data-x>닫기</button></div>`
+    : `<p>선생님께 받은 <b>내 코드</b>를 넣어 주세요. 복사해서 붙여 넣어도 돼요.</p>
+      <div class="wr-key-row"><input type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-1234" aria-label="내 코드"><button class="btn primary" data-ok>확인</button></div>
+      <label class="wr-remember"><input type="checkbox"> 이 컴퓨터에 기억하기 (내 컴퓨터일 때만 체크)</label>
+      <p class="wr-status" data-msg></p>
+      <div class="btns" style="justify-content:flex-end"><button class="btn" data-x>닫기</button></div>`}
+  </div>`;
+  document.body.appendChild(dlg);
+  const close = () => { dlg.remove(); if(onDone) onDone(!!getKey(repo)); };
+  dlg.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
+  dlg.onclick = e => { if(e.target === dlg) close(); };
+  const out = dlg.querySelector("[data-out]"); if(out) out.onclick = () => { clearKey(repo); close(); };
+  const inp = dlg.querySelector("input[type=text]"); if(!inp) return;
+  const msg = dlg.querySelector("[data-msg]"); inp.focus();
+  const go = async () => {
+    msg.textContent = "코드를 확인하는 중…"; msg.className = "wr-status";
+    try{ await connect(repo, inp.value, dlg.querySelector(".wr-remember input").checked);
+      dlg.querySelector(".wr-dialog").innerHTML = `<h3>🎉 열쇠 연결 완료!</h3><p>이제 책상에서 과제를 쓰고 바로 저장·제출할 수 있어요.</p><div class="btns" style="justify-content:flex-end"><button class="btn primary" data-x>확인</button></div>`;
+      dlg.querySelector("[data-x]").onclick = close;
+    }catch(e){ msg.textContent = e.message; msg.className = "wr-status err"; }
+  };
+  dlg.querySelector("[data-ok]").onclick = go;
+  inp.onkeydown = e => { e.stopPropagation(); if(e.key === "Enter") go(); };
+  inp.onkeyup = e => e.stopPropagation();
+}
+
+window.Writer = { view, mount, keyDialog, hasKey: repo => !!getKey(repo), isDirty: () => W.dirty, reset: () => { W.dirty = false; }, _parse: parseMd, _toMd: segs => { W.segs = segs; return toMd(); } };
 })();
