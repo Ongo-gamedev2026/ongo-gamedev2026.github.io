@@ -149,11 +149,11 @@ table.status a.badge:hover{filter:brightness(.95)}
 .town-btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tbtn{border:1px solid #3d3875;background:#262256;color:#fff;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:600}
 .tbtn:hover{background:#332e6e}
-#town{display:block;width:100%;height:auto;image-rendering:pixelated;border-radius:10px;touch-action:none;outline:none;background:#000}
-.town-wrap.house #town{max-width:760px;margin:0 auto}
+#town{display:block;width:100%;height:auto;margin:0 auto;image-rendering:pixelated;border-radius:10px;touch-action:none;outline:none;background:#000}
 .town-help{margin:10px 2px 0;font-size:13px;color:#a8a4d6;text-align:center}
 .town-help b{color:#fff}
 .town-scroll{overflow-x:auto;border-radius:10px}
+.main:has(.town-wrap){padding-bottom:14px}
 @media (max-width:760px){.town-scroll #town{width:760px;max-width:none}.town-wrap{padding:12px 10px}}
 #arcadeBox{position:fixed;inset:0;z-index:60;background:rgba(5,4,15,.72);display:grid;place-items:center;padding:16px}
 .arcade-panel{width:min(980px,96vw);height:min(88vh,780px);background:#0d0b1e;border:3px solid #e9ecff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
@@ -340,6 +340,20 @@ function viewTown(scene, repo){
     <p class="town-help">⬅️➡️⬆️⬇️ / WASD 이동 · <b>Space</b> 조사하기 · 집이나 건물을 누르면 그 앞까지 걸어가요 · 굴뚝 연기와 ★ = 제출한 주차 수</p>
   </div>`;
 }
+/* 화면 한 페이지 안에 마을/방이 다 보이도록 크기 맞추기 */
+function fitTown(){
+  const cv = $("#town"); if(!cv) return;
+  if(window.innerWidth <= 760){ cv.style.width = ""; cv.style.height = ""; return; }   // 휴대폰은 좌우로 밀어서 보기
+  const box = cv.closest(".town-wrap"), help = box.querySelector(".town-help");
+  const top = cv.getBoundingClientRect().top + window.scrollY;
+  const bottomSpace = (help ? help.offsetHeight + 10 : 0) + 12 + 16;            // 안내 문구 + 상자 여백 + 페이지 여백
+  const availH = Math.max(240, window.innerHeight - top - bottomSpace);
+  const availW = (cv.parentElement.clientWidth || box.clientWidth);
+  const ratio = cv.width / cv.height;
+  const w = Math.floor(Math.min(availW, availH * ratio));
+  cv.style.width = w + "px"; cv.style.height = Math.floor(w / ratio) + "px";
+}
+window.addEventListener("resize", () => fitTown());
 function startTown(scene, repo){
   const cv = $("#town"); if(!cv || !window.Town) return;
   const st = repo ? findStu(repo) : null; if(scene === "house" && !st) return;
@@ -376,7 +390,7 @@ function startTown(scene, repo){
     intro: scene === "house" ? [`${label(st)}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."] : null,
     onExit: () => { S.townFrom = idx; location.hash = "#/"; } });
   const ab = $("#tArcade"); if(ab) ab.onclick = () => arcade();
-  cv.focus({preventScroll:true});
+  fitTown(); cv.focus({preventScroll:true});
 }
 
 function viewWeek(n){
