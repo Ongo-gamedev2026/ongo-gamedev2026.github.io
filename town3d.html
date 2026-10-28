@@ -63,7 +63,9 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.appendChild(renderer.domElement);
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
-function resize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+let lastW = 0, lastH = 0;
+function resize(){ const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight); if (w === lastW && h === lastH) return; lastW = w; lastH = h;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener("resize", resize); resize();
 
 const M = (c, o={}) => new THREE.MeshStandardMaterial({ color:c, roughness:.85, flatShading:true, ...o });
@@ -339,7 +341,7 @@ function bfs(s, e){
 /* ---------- 그리기 ---------- */
 const tmp = new THREE.Vector3();
 function frame(now){
-  step(now);
+  resize(); step(now);
   const wx = P.fx + map.ox, wz = P.fy + map.oz;
   player.position.set(wx, 0, wz);
   const target = [0, -Math.PI/2, Math.PI/2, Math.PI][P.dir];
@@ -361,6 +363,7 @@ const wi = STUDENTS.findIndex(s => s.repo === want);
 if (wi >= 0) goHouse(wi); else goVillage();
 camera.position.set(0, 17, 15);
 document.getElementById("load").remove();
+window.__town3d = { camera, P, get scene(){ return scene; } };
 requestAnimationFrame(frame);
 </script>
 </body>
