@@ -243,6 +243,63 @@ function renderSegs(box){
       box.appendChild(wrap);
     }
   });
+  addTips(box);
+}
+
+/* ---------- ❓ 작성 팁 ----------
+   weeks: 팁이 나오는 주차, match: 칸 이름(라벨·표 머리·제목)에 들어 있으면 ? 버튼이 붙어요.
+   새 팁은 아래 목록에 하나 더 추가하면 돼요. */
+const TIPS = [
+  {
+    weeks:[2, 3], match:/대상|타깃|타겟/, title:"🎯 \"대상\" 칸 작성 예시",
+    html:`<p>나이 + 성별 + 성향 + 상황을 함께 적으면 훨씬 구체적이 돼요!</p>
+      <div class="tip-h">🎮 게임별 타깃 예시</div>
+      <ul class="tip-list">
+        <li><b>로블록스</b> → 초등학생<br><span>친구와 같이 놀고 꾸미기를 좋아하는 아이들</span></li>
+        <li><b>마인크래프트</b> → 초등학생 ~ 20대<br><span>만들고 탐험하는 걸 좋아하는 사람</span></li>
+        <li><b>롤, 배그</b> → 10대 ~ 30대<br><span>친구와 팀을 짜서 경쟁하고 이기는 걸 좋아하는 사람</span></li>
+        <li><b>리니지</b> → 40대 ~ 60대<br><span>캐릭터를 오래 키우고 길드에서 인정받고 싶은 사람</span></li>
+        <li><b>블루 아카이브, 명일방주</b> → 10대 후반 ~ 20대 남성 중심<br><span>캐릭터 수집과 스토리, 일러스트를 좋아하는 사람</span></li>
+        <li><b>샤이닝니키</b> → 10대 ~ 20대 여성 중심<br><span>옷을 골라 코디하고 꾸미는 걸 좋아하는 사람</span></li>
+        <li><b>애니팡, 캔디크러시</b> → 전 연령 (특히 30대 이상)<br><span>쉬는 시간에 짧게 즐기고 싶은 사람</span></li>
+      </ul>
+      <div class="tip-h">✏️ 내 게임 대상 쓰는 법</div>
+      <ol class="tip-list">
+        <li><b>나이</b>: 몇 살 정도가 할까?</li>
+        <li><b>성별</b>: 더 좋아할 성별이 있을까? (없으면 "누구나")</li>
+        <li><b>성향</b>: 어떤 걸 좋아하는 사람일까?</li>
+        <li><b>상황</b>: 언제, 어디서, 얼마나 할까?</li>
+      </ol>
+      <p class="tip-ex">예) 10대 ~ 20대, 누구나 / 짧고 빠른 승부를 좋아하는 사람 / 쉬는 시간 5분 동안 혼자 가볍게 즐기는 게임</p>
+      <div class="tip-warn"><b>⚠️ 주의</b>
+        <ul>
+          <li>성별을 적은 예시는 "주로 하는 사람"이라는 뜻이에요. 다른 성별은 못 한다는 뜻이 아니에요!</li>
+          <li>예시를 그대로 베끼지 말고, 내 게임에 맞게 직접 생각해서 적어 주세요.</li>
+          <li>"모든 사람"처럼 너무 넓게 쓰기보다, 내 게임을 가장 좋아할 사람을 떠올려 보세요.</li>
+        </ul></div>`
+  }
+];
+function openTip(tip){
+  const dlg = document.createElement("div"); dlg.className = "wr-modal";
+  dlg.innerHTML = `<div class="wr-dialog tip-dialog" role="dialog" aria-modal="true"><h3>${tip.title}</h3>${tip.html}
+    <div class="btns" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" data-x>알겠어요</button></div></div>`;
+  document.body.appendChild(dlg);
+  const close = () => dlg.remove();
+  dlg.querySelector("[data-x]").onclick = close;
+  dlg.onclick = e => { if(e.target === dlg) close(); };
+}
+function addTips(box){
+  const tips = TIPS.filter(t => t.weeks.includes(W.w.week)); if(!tips.length) return;
+  const used = new Set();
+  box.querySelectorAll(".wr-label, th, h1, h2, h3, h4, .wr-raw strong, td.ro").forEach(el => {
+    const txt = el.textContent.trim(); if(!txt || txt.length > 40) return;
+    const tip = tips.find(t => t.match.test(txt)); if(!tip || used.has(tip)) return;
+    used.add(tip);
+    const b = document.createElement("button"); b.type = "button"; b.className = "tip-btn";
+    b.textContent = "?"; b.title = "작성 팁 보기"; b.setAttribute("aria-label", "작성 팁 보기");
+    b.onclick = e => { e.preventDefault(); e.stopPropagation(); openTip(tip); };
+    (el.querySelector("p") || el).appendChild(b);
+  });
 }
 
 /* ---------- 상태 표시 ---------- */
