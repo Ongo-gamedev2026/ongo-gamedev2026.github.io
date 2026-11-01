@@ -1,4 +1,25 @@
 {
-  "updated": null,
-  "records": []
+  "updated": "2026-11-01T13:09:22.421Z",
+  "records": [
+    {
+      "repo": "game-05",
+      "tag": "week1-v1",
+      "week": 1,
+      "version": 1,
+      "published_at": "2026-11-01T09:32:14Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week1-v1",
+      "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: 1주차 보고서\n- 선생님께 질문: 없습니다",
+      "recorded_at": "2026-11-01T13:09:21.726Z"
+    },
+    {
+      "repo": "game-05",
+      "tag": "week2-v1",
+      "week": 2,
+      "version": 1,
+      "published_at": "2026-11-01T09:43:18Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week2-v1",
+      "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: 게임 기획서\n- 선생님께 질문: 없습니다",
+      "recorded_at": "2026-11-01T13:09:21.725Z"
+    }
+  ]
 }
