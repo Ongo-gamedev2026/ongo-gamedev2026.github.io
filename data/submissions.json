@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-02T10:52:29.769Z",
+  "updated": "2026-11-02T20:43:09.693Z",
   "records": [
     {
       "repo": "game-02",
@@ -10,6 +10,16 @@
       "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week2-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
       "recorded_at": "2026-11-02T10:52:28.091Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week1-v1",
+      "week": 1,
+      "version": 1,
+      "published_at": "2026-11-02T12:07:50Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week1-v1",
+      "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
+      "recorded_at": "2026-11-02T20:43:07.921Z"
     },
     {
       "repo": "game-03",
@@ -40,6 +50,16 @@
       "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week2-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: 게임 기획서\n- 선생님께 질문: 없습니다",
       "recorded_at": "2026-11-01T13:09:21.725Z"
+    },
+    {
+      "repo": "game-07",
+      "tag": "week2-v1",
+      "week": 2,
+      "version": 1,
+      "published_at": "2026-11-02T13:37:33Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-07/releases/tag/week2-v1",
+      "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
+      "recorded_at": "2026-11-02T20:43:09.448Z"
     }
   ]
 }
