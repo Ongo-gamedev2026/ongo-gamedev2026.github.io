@@ -805,5 +805,12 @@ function keyDialog(repo, onDone){
   inp.onkeyup = e => e.stopPropagation();
 }
 
-window.Writer = { view, mount, keyDialog, hasKey: repo => !!getKey(repo), isDirty: () => W.dirty, reset: () => { W.dirty = false; }, _parse: parseMd, _toMd: segs => { W.segs = segs; return toMd(); } };
+/* 학생 상세 페이지(#/week/N/repo)에도 같은 🤖 상자를 보여 줘요. 4단계 채우기는 작성하기 화면으로 넘어가서 채워요. */
+function reviewFor(n, repo){ const w = findWeek(n); return w && REVIEW_WEEKS.includes(w.week) ? reviewBox() : ""; }
+function mountReviewFor(n, repo){
+  const w = findWeek(n), st = findStu(repo); if(!w || !st || !REVIEW_WEEKS.includes(w.week)) return;
+  W.w = w; W.st = st; W.doc = null; W.segs = []; W.dirty = false; mountReview();
+}
+
+window.Writer = { view, mount, keyDialog, reviewFor, mountReviewFor, hasKey: repo => !!getKey(repo), isDirty: () => W.dirty, reset: () => { W.dirty = false; }, _parse: parseMd, _toMd: segs => { W.segs = segs; return toMd(); } };
 })();

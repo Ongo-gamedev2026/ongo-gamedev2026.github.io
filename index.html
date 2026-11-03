@@ -515,6 +515,7 @@ function viewDetail(n, repo){
         <p class="hint">작성하기 화면에서 <b>저장하기</b>로 저장하고, 다 쓰면 <b>제출하기</b>를 누르세요. 메인 사이트에는 최대 1시간 뒤에 표시돼요.</p>
       </div>
     </div>
+    ${window.Writer ? Writer.reviewFor(w.week, st.repo) : ""}
     <div class="doc-bar">
       ${w.docs.map((d,i) => `<button class="tab ${i?"":"on"}" data-doc="${i}">${esc(d.name)}</button>`).join("")}
       <select id="verSel" aria-label="버전">${verOpts}</select>
@@ -630,6 +631,7 @@ function route_(){
     const st = findStu(r.repo), w = findWeek(r.week);
     if(st && w){
       loadDetailDoc(st, w);
+      if(window.Writer) Writer.mountReviewFor(w.week, st.repo);
       main.querySelectorAll(".tab").forEach(b => b.onclick = () => { main.querySelectorAll(".tab").forEach(x => x.classList.remove("on")); b.classList.add("on"); loadDetailDoc(st, w); });
       $("#verSel").onchange = () => loadDetailDoc(st, w);
       $("#printBtn").onclick = e => { e.preventDefault(); const v = $("#verSel").value; const ver = v === "main" ? "main" : "v" + v.split("-v")[1];
