@@ -430,6 +430,116 @@ function drawKey(notice){
   inp.onkeydown = e => { if(e.key === "Enter") go(); };
 }
 
+
+/* ---------- 🤖 Gemini 기획서 점검 (3주차) ----------
+   학생의 최신 2주차 기획서(docs/week2-plan.md)를 불러와, 예시·안내는 빼고 칸별로 정리한 뒤
+   점검 프롬프트 끝에 붙여 줘요. REVIEW_WEEKS에 주차를 넣으면 그 주차 작성하기 화면에 나와요. */
+const REVIEW_WEEKS = [3];
+const PLAN_PATH = "docs/week2-plan.md";
+function summarizePlan(md){
+ const L=md.replace(/\r\n/g,'\n').split('\n');const S={intro:'',target:'',core:'',refs:[],s51:[],s52:[],s53rows:[],s53in:[]};let sec='',tbl=0;
+ const cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/\|\s*$/,'');const o=[];let c='';for(let i=0;i<s.length;i++){if(s[i]==='\\'&&s[i+1]==='|'){c+='|';i++;continue}if(s[i]==='|'){o.push(c);c='';continue}c+=s[i]}o.push(c);return o.map(x=>x.replace(/<br\s*\/?>/gi,' / ').trim())};
+ const clean=t=>t.replace(/\*\*/g,'').replace(/[^\p{L}\p{N}\s()·,./-]/gu,'').replace(/\s+/g,' ').trim();
+ for(const l of L){
+  if(/^#{2,3}\s/.test(l)){tbl=0;sec=/한 문장/.test(l)?'intro':/타깃|타겟/.test(l)?'target':/레퍼런스/.test(l)?'refs':/핵심/.test(l)?'core':/5-1/.test(l)?'s51':/5-2/.test(l)?'s52':/5-3/.test(l)?'s53':(/5️⃣|스테이지 1 만들어/.test(l)?'':sec);continue}
+  let m;
+  if((m=l.match(/^\*\*답:\*\*[ \t]*(.*)$/))&&['intro','target','core'].includes(sec)){S[sec]=m[1].trim();continue}
+  if((m=l.match(/^\s*-\s*\[(x|X)\]\s*(.*)$/))&&sec==='s53'){S.s53in.push(clean(m[2]));continue}
+  if(/^\|/.test(l)){tbl++;if(tbl<=2)continue;const c=cells(l);
+   if(sec==='refs'&&c.some(Boolean))S.refs.push(c);
+   if(sec==='s51')S.s51.push([clean(c[0]),c[1]||'']);
+   if(sec==='s52'&&(c[1]||c[2]||/플레이어/.test(c[0])||clean(c[0])))S.s52.push([clean(c[0])||'(이름 없음)',c[1]||'',c[2]||'']);
+   if(sec==='s53'&&!/^예\s*[:：]/.test(c[0])&&(c[0]||c[1]))S.s53rows.push(c);
+  }else if(l.trim()==='')tbl=tbl;else if(!/^\|/.test(l))tbl=0;
+ }
+ const v=x=>x&&!/^ㅇ+$/.test(x.trim())?x.trim():'(비어 있음)';
+ const out=['[내 게임 기획서]',`1. 한 문장 소개: ${v(S.intro)}`,`2. 타깃 플레이어: ${v(S.target)}`,'3. 레퍼런스 게임:'];
+ out.push(...(S.refs.length?S.refs.map(r=>`   - ${v(r[0])} (장르: ${v(r[1])}) → 참고하고 싶은 점: ${v(r[2])}`):['   - (비어 있음)']));
+ out.push(`4. 핵심 재미 요소: ${v(S.core)}`,'5-1. 스테이지 1에서 일어나는 일:');
+ out.push(...S.s51.map(r=>`   - ${r[0]}: ${v(r[1])}`));
+ out.push('5-2. 스테이지 1에 등장하는 것들:');
+ out.push(...(S.s52.length?S.s52.map(r=>`   - ${r[0]} → 갖고 있는 정보: ${v(r[1])} / 하는 행동·규칙: ${v(r[2])}`):['   - (비어 있음)']));
+ out.push(`5-3. 입력 방식: ${S.s53in.length?S.s53in.join(', '):'(비어 있음)'}`);
+ out.push(...(S.s53rows.length?S.s53rows.map(r=>`   - ${v(r[0])} → ${v(r[1])}`):['   - (비어 있음)']));
+ const filled=[S.intro,S.target,S.core].filter(x=>x&&!/^ㅇ+$/.test(x.trim())).length+S.refs.length+S.s52.filter(r=>r[1]||r[2]).length;
+ return {text:out.join('\n'),empty:filled<2};
+}
+
+const REVIEW_PROMPT = `너는 고등학생의 첫 게임 기획을 도와주는 게임 기획 멘토야.
+맨 아래 [내 게임 기획서]는 내가 2주차에 쓴 게임 기획서야. "(비어 있음)"은 아직 못 쓴 칸이야. 다음 주에 이 기획서를 바탕으로 AI와 함께 "스테이지 1"을 구성요소 하나씩 만들 거야.
+
+[규칙]
+- 게임 코드는 절대 만들지 마.
+- 기획서를 대신 다시 써 주지 마. 내가 직접 고칠 수 있게 짚어 주고 질문해 줘.
+- 내 게임 아이디어와 재미 요소는 바꾸지 마.
+- 고등학생이 이해할 수 있는 쉬운 말로 써 줘.
+
+[이렇게 알려줘]
+1. 내가 이해한 게임: 이 게임을 한 문장으로 정리해 줘.
+2. 칸별 점검표: 기획서의 칸(1~4번, 5-1 시작·플레이 중·클리어·실패, 5-2 등장하는 것들, 5-3 입력 방식)마다 아래 표로 알려 줘.
+   | 칸 | 상태(✅ 충분 / 🔺 보완 필요 / ❌ 비어 있음) | 이유 | 내가 답해야 할 질문 |
+3. 꼭 고쳐야 할 것 TOP 3: 스테이지 1을 만들기 전에 반드시 정해야 하는 것. 특히 아래를 확인해 줘.
+   - 숫자가 없는 것 (체력, 속도, 개수, 시간 등)
+   - 클리어·실패 조건이 확인할 수 없게 적힌 것 (예: "막는다" → "몇 마리를 막으면 성공?")
+   - 서로 맞지 않는 것 (예: 입력 방식에는 있는데 등장하는 것에 없는 행동)
+4. 더 추가해야 할 것: 5-1이나 5-3에는 나오는데 5-2 "등장하는 것들"에 빠진 것, 또는 스테이지 1에 꼭 필요한데 없는 것.
+5. 스테이지 1에서 뒤로 미뤄도 되는 것: 처음부터 만들기엔 너무 큰 기능.
+6. 화면 시점 추천: 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중에서 내 게임에 맞는 것과 이유.
+7. 구성요소 만들기 순서: 화면 → 플레이어 → 조작 → … 처럼 스테이지 1을 하나씩 만들 순서를 7~10단계로 적어 줘.
+
+마지막에 "가장 먼저 답해 줄 질문 3개"를 번호로 물어봐 줘.`;
+const FOLLOW_PROMPT = `네 질문에 대한 내 답이야.
+1. (내 답)
+2. (내 답)
+3. (내 답)
+
+내 답이 기획서의 어느 칸에 들어가야 하는지 알려 주고, 아직 부족한 부분이 있으면 한 가지만 더 물어봐 줘. 기획서는 대신 써 주지 마.`;
+async function copyText(s, btn){
+  try{ await navigator.clipboard.writeText(s); }
+  catch(_){ const t = document.createElement("textarea"); t.value = s; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+  const o = btn.textContent; btn.textContent = "✓ 복사했어요!"; setTimeout(() => btn.textContent = o, 1500);
+}
+async function latestPlan(){
+  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length) return toMd();      // 지금 고치는 중인 기획서(저장 전 내용 포함)
+  if(getKey(W.st.repo)){
+    const r = await gh(`${repoPath()}/contents/${encodeURI(PLAN_PATH)}?ref=main`);
+    if(r.ok) return b64dec((await r.json()).content);
+  }
+  const r = await fetch(rawUrl(W.st, "main", PLAN_PATH) + "?t=" + Date.now());
+  if(!r.ok) throw new Error(r.status); return r.text();
+}
+function reviewBox(){
+  return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini에게 기획서 점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></summary>
+    <ol class="wr-ai-steps">
+      <li><b>내 기획서로 프롬프트 만들기</b>를 눌러요. 지금 저장된 기획서가 정리되어 프롬프트 끝에 붙어요.</li>
+      <li><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요. 이번엔 코드를 만들지 않아요.</li>
+      <li>Gemini의 질문에 답하면서 <b>게임 기획서 (보완)</b> 탭을 고치고, 받은 피드백은 <b>3주차 개발일지 1️⃣</b>에 적어요.</li>
+    </ol>
+    <div class="btns"><button class="btn primary" type="button" data-make>🧩 내 기획서로 프롬프트 만들기</button><button class="btn" type="button" data-copy disabled>📋 프롬프트 복사</button></div>
+    <p class="wr-status" data-msg></p>
+    <pre class="wr-ai-out" data-out hidden></pre>
+    <div class="wr-ai-follow"><b>💬 질문에 답할 때 보낼 문장</b><pre class="wr-ai-out">${esc(FOLLOW_PROMPT)}</pre><div class="btns"><button class="btn" type="button" data-follow>📋 복사</button></div></div>
+    <p class="hint">💡 Gemini가 써 준 문장을 그대로 붙이지 말고, 내 생각을 내 말로 고쳐 적어요. 제안이 내 게임과 다르면 따르지 않아도 돼요.</p>
+  </details>`;
+}
+function mountReview(){
+  const box = document.getElementById("wrAi"); if(!box) return;
+  const msg = box.querySelector("[data-msg]"), out = box.querySelector("[data-out]"), cp = box.querySelector("[data-copy]");
+  let prompt = "";
+  box.querySelector("[data-make]").onclick = async () => {
+    msg.textContent = "기획서를 불러오는 중…"; msg.className = "wr-status";
+    try{
+      const sm = summarizePlan(await latestPlan());
+      prompt = REVIEW_PROMPT + "\n\n" + sm.text;
+      out.textContent = prompt; out.hidden = false; cp.disabled = false;
+      msg.textContent = sm.empty ? "⚠️ 기획서가 거의 비어 있어요. 게임 기획서 (보완) 탭에서 1~5번을 먼저 채우면 더 좋은 피드백을 받을 수 있어요." : "✅ 만들었어요. 복사해서 Gemini에 붙여 넣으세요.";
+      msg.className = "wr-status " + (sm.empty ? "warn" : "ok");
+    }catch(e){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
+  };
+  cp.onclick = () => copyText(prompt, cp);
+  box.querySelector("[data-follow]").onclick = e => copyText(FOLLOW_PROMPT, e.currentTarget);
+}
+
 /* ---------- 페이지 ---------- */
 function view(n, repo, docIdx){
   const w = findWeek(n), st = findStu(repo);
@@ -439,6 +549,7 @@ function view(n, repo, docIdx){
     <div class="row-head"><h2>✏️ ${w.week}주차 · ${esc(d.name)} <em>${esc(label(st))}</em></h2></div>
     ${w.docs.length > 1 ? `<div class="doc-bar">${w.docs.map((x, i) => `<a class="tab ${i === di ? "on" : ""}" href="#/write/${w.week}/${esc(st.repo)}/${i}">${esc(x.name)}</a>`).join("")}</div>` : ""}
     <div id="wrKey"></div>
+    ${REVIEW_WEEKS.includes(w.week) ? reviewBox() : ""}
     <div class="paper wr"><div id="wrDoc"></div></div>
     <div class="wr-bar">
       <span id="wrStatus" class="wr-status"></span>
@@ -450,7 +561,7 @@ function view(n, repo, docIdx){
 function mount(n, repo, docIdx){
   const w = findWeek(n), st = findStu(repo); if(!w || !st) return;
   W.w = w; W.st = st; W.doc = w.docs[Math.min(+docIdx || 0, w.docs.length - 1)];
-  drawKey(); load();
+  drawKey(); load(); mountReview();
   document.getElementById("wrSave").onclick = () => save();
   document.getElementById("wrSubmit").onclick = openSubmit;
 }
