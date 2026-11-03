@@ -433,10 +433,12 @@ function drawKey(notice){
 
 
 /* ---------- 🤖 Gemini 기획서 점검 (3주차) ----------
-   학생의 최신 2주차 기획서(docs/week2-plan.md)를 불러와, 예시·안내는 빼고 칸별로 정리한 뒤
-   점검 프롬프트 끝에 붙여 줘요. REVIEW_WEEKS에 주차를 넣으면 그 주차 작성하기 화면에 나와요. */
+   3주차 보완 기획서(docs/week3-plan.md)에 내용이 있으면 그것을, 비어 있으면 2주차 기획서(docs/week2-plan.md)를 불러와
+   예시·안내는 빼고 칸별로 정리한 뒤 점검 프롬프트 끝에 붙여 줘요. 4단계 채우기는 3주차 보완 기획서에 채워요.
+   REVIEW_WEEKS에 주차를 넣으면 그 주차 작성하기 화면에 나와요. */
 const REVIEW_WEEKS = [3];
-const PLAN_PATH = "docs/week2-plan.md";
+const PLAN_PATH = "docs/week3-plan.md";       // 채우기 대상 (3주차 보완 기획서)
+const SRC_PATHS = ["docs/week3-plan.md", "docs/week2-plan.md"];   // 점검할 때 먼저 찾는 순서
 function summarizePlan(md){
  const L=md.replace(/\r\n/g,'\n').split('\n');const S={intro:'',target:'',core:'',refs:[],s51:[],s52:[],s53rows:[],s53in:[]};let sec='',tbl=0;
  const cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/\|\s*$/,'');const o=[];let c='';for(let i=0;i<s.length;i++){if(s[i]==='\\'&&s[i+1]==='|'){c+='|';i++;continue}if(s[i]==='|'){o.push(c);c='';continue}c+=s[i]}o.push(c);return o.map(x=>x.replace(/<br\s*\/?>/gi,' / ').trim())};
@@ -500,14 +502,23 @@ async function copyText(s, btn){
   catch(_){ const t = document.createElement("textarea"); t.value = s; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
   const o = btn.textContent; btn.textContent = "✓ 복사했어요!"; setTimeout(() => btn.textContent = o, 1500);
 }
-async function latestPlan(){
-  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length) return toMd();      // 지금 고치는 중인 기획서(저장 전 내용 포함)
+async function fetchDoc(path){
+  if(W.doc && W.doc.path === path && W.segs.length) return toMd();      // 지금 고치는 중인 문서(저장 전 내용 포함)
   if(getKey(W.st.repo)){
-    const r = await gh(`${repoPath()}/contents/${encodeURI(PLAN_PATH)}?ref=main`);
+    const r = await gh(`${repoPath()}/contents/${encodeURI(path)}?ref=main`);
     if(r.ok) return b64dec((await r.json()).content);
+    if(r.status === 404) return null;
   }
-  const r = await fetch(rawUrl(W.st, "main", PLAN_PATH) + "?t=" + Date.now());
-  if(!r.ok) throw new Error(r.status); return r.text();
+  const r = await fetch(rawUrl(W.st, "main", path) + "?t=" + Date.now());
+  if(r.status === 404) return null; if(!r.ok) throw new Error(r.status); return r.text();
+}
+async function latestPlan(){
+  let last = null;
+  for(const p of SRC_PATHS){
+    const t = await fetchDoc(p); if(t == null) continue;
+    const sm = summarizePlan(t); if(!sm.empty) return { ...sm, from:p }; if(!last) last = { ...sm, from:p };
+  }
+  if(!last) throw new Error("no plan"); return last;
 }
 
 /* ---------- 📥 Gemini 정리 결과(Word·글)로 기획서 채우기 ----------
@@ -678,7 +689,7 @@ const BOOST_PROMPT = `점검해 줘서 고마워. 이제 🔺 보완 필요와 �
 function reviewBox(){
   return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini와 기획서 보완하기 <span>점검 → 보완 요청 → 답하기 → 기획서에 채우기</span></summary>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></div>
-      <p class="hint">버튼을 누르면 내 기획서가 정리되어 프롬프트 끝에 붙어요. <a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요.</p>
+      <p class="hint">버튼을 누르면 내 기획서(3주차 보완 기획서가 비어 있으면 2주차 기획서)가 정리되어 프롬프트 끝에 붙어요. <a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요.</p>
       <div class="btns"><button class="btn primary" type="button" data-make>🧩 내 기획서로 점검 프롬프트 만들기</button><button class="btn" type="button" data-copy disabled>📋 복사</button></div>
       <p class="wr-status" data-msg></p>
       <pre class="wr-ai-out" data-out hidden></pre>
@@ -712,10 +723,11 @@ function mountReview(){
   box.querySelector("[data-make]").onclick = async () => {
     msg.textContent = "기획서를 불러오는 중…"; msg.className = "wr-status";
     try{
-      const sm = summarizePlan(await latestPlan());
+      const sm = await latestPlan();
       prompt = REVIEW_PROMPT + "\n\n" + sm.text;
       out.textContent = prompt; out.hidden = false; cp.disabled = false;
-      msg.textContent = sm.empty ? "⚠️ 기획서가 거의 비어 있어요. 게임 기획서 (보완) 탭에서 1~5번을 먼저 채우면 더 좋은 피드백을 받을 수 있어요." : "✅ 만들었어요. 복사해서 Gemini에 붙여 넣으세요.";
+      const from = /week3/.test(sm.from) ? "3주차 보완 기획서" : "2주차 기획서";
+      msg.textContent = sm.empty ? "⚠️ 기획서가 거의 비어 있어요. 게임 기획서 (보완) 탭에서 1~5번을 먼저 채우면 더 좋은 피드백을 받을 수 있어요." : `✅ ${from}로 만들었어요. 복사해서 Gemini에 붙여 넣으세요.`;
       msg.className = "wr-status " + (sm.empty ? "warn" : "ok");
     }catch(e){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
