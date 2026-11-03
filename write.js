@@ -190,7 +190,7 @@ function renderSegs(box){
       return;
     }
     if(s.t === "ans"){
-      const d = document.createElement("div"); d.className = "wr-ans";
+      const d = document.createElement("div"); d.className = "wr-ans" + (s.hl ? " hl-" + s.hl : "");
       d.innerHTML = `<div class="wr-label">${inl(s.label)}</div>`;
       d.appendChild(ta(s.val, "여기에 적어요", "wr-in", v => s.val = v));
       box.appendChild(d); return;
@@ -212,7 +212,7 @@ function renderSegs(box){
       box.appendChild(d); return;
     }
     if(s.t === "chk"){
-      const d = document.createElement("label"); d.className = "wr-chk";
+      const d = document.createElement("label"); d.className = "wr-chk" + (s.hl ? " hl-" + s.hl : "");
       const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = s.on;
       cb.onchange = () => { s.on = cb.checked; markDirty(); };
       d.appendChild(cb); d.insertAdjacentHTML("beforeend", `<span>${inl(s.text)}</span>`);
@@ -228,7 +228,7 @@ function renderSegs(box){
         r.forEach(c => {
           const td = document.createElement("td");
           if(c.ro){ td.className = /^예\s*[:：]/.test(r[0].text || "") ? "ro ex" : "ro"; td.innerHTML = inl(c.text); }
-          else { td.className = "in"; td.appendChild(ta(c.val, c.ph, "wr-cell", v => c.val = v)); }
+          else { td.className = "in" + (c.hl ? " hl-" + c.hl : ""); td.appendChild(ta(c.val, c.ph, "wr-cell", v => c.val = v)); }
           tr.appendChild(td);
         });
         body.appendChild(tr);
@@ -331,6 +331,7 @@ async function load(){
   W.segs = parseMd(text);
   renderSegs(box);
   setStatus(getKey(W.st.repo) ? "불러왔어요" : "열쇠를 넣으면 저장할 수 있어요", "");
+  applyPending();
 }
 
 async function save(quiet){
@@ -508,6 +509,157 @@ async function latestPlan(){
   const r = await fetch(rawUrl(W.st, "main", PLAN_PATH) + "?t=" + Date.now());
   if(!r.ok) throw new Error(r.status); return r.text();
 }
+
+/* ---------- 📥 Gemini 정리 결과(Word·글)로 기획서 채우기 ----------
+   정해진 [칸 이름] 형식의 줄을 읽어 게임 기획서 (보완) 칸에 채워요.
+   바뀐 칸은 고치고, 새로운 레퍼런스·등장하는 것·입력은 줄을 추가해요. 지우지는 않아요. */
+const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로, 내 게임 기획서를 보완한 결과를 아래 형식 그대로 정리해서 Word 문서 파일로 만들어 줘. (파일을 만들 수 없으면 글로 보여 줘.)
+
+[규칙]
+- 내가 대화에서 직접 답한 내용만 반영해. 내가 말하지 않은 내용은 새로 지어내지 마.
+- 바뀌지 않은 칸은 원래 기획서 내용을 그대로 써.
+- 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 한 칸씩 써. 표로 만들지 마.
+- 레퍼런스, 등장하는 것, 입력은 하나마다 한 줄씩 쓰고, 칸은 | 로 나눠.
+- 아직 정하지 못한 칸은 "(비어 있음)"이라고 써.
+
+[1 한 문장 소개] 
+[2 타깃 플레이어] 
+[3 레퍼런스] 게임 이름 | 장르 | 참고하고 싶은 점
+[4 핵심 재미] 
+[5-1 시작할 때] 
+[5-1 플레이 중] 
+[5-1 클리어 조건] 
+[5-1 실패 조건] 
+[5-2 등장] 이름 | 갖고 있는 정보 | 하는 행동 또는 규칙
+[5-3 입력 방식] 키보드, 마우스 중 사용하는 것
+[5-3 입력] 입력 | 게임 속 동작`;
+
+/* docx → 줄 글 (외부 라이브러리 없이 zip을 풀어요) */
+async function docxText(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1; for(let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 66000); i--){ if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; } }
+  if(eocd < 0) throw new Error("zip");
+  let p = dv.getUint32(eocd + 16, true), n = dv.getUint16(eocd + 10, true), ent = null;
+  for(let k = 0; k < n; k++){
+    const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nl));
+    if(name === "word/document.xml") ent = { method:dv.getUint16(p + 10, true), size:dv.getUint32(p + 20, true), off:dv.getUint32(p + 42, true) };
+    p += 46 + nl + xl + cl;
+  }
+  if(!ent) throw new Error("not docx");
+  const lo = ent.off, start = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+  let data = u8.subarray(start, start + ent.size);
+  if(ent.method === 8) data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  const doc = new DOMParser().parseFromString(new TextDecoder().decode(data), "application/xml");
+  const kids = (el, nm) => [...el.childNodes].filter(x => x.localName === nm);
+  const ptext = pe => { let t = ""; pe.querySelectorAll("*").forEach(x => { if(x.localName === "t") t += x.textContent; else if(x.localName === "tab") t += " "; else if(x.localName === "br") t += "\n"; }); return t; };
+  const out = [];
+  const walk = el => [...el.childNodes].forEach(x => {
+    if(x.localName === "p") out.push(ptext(x));
+    else if(x.localName === "tbl") kids(x, "tr").forEach(tr => out.push(kids(tr, "tc").map(tc => kids(tc, "p").map(ptext).join(" ").trim()).join(" | ")));
+    else if(x.localName === "sdt" || x.localName === "sdtContent" || x.localName === "body") walk(x);
+  });
+  walk(doc.getElementsByTagNameNS("*", "body")[0] || doc.documentElement);
+  return out.join("\n");
+}
+
+const normName = t => String(t || "").replace(/\*\*/g, "").replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+const isBlank = v => !v || /^\(?\s*(비어\s*있음|없음|미정|-)\s*\)?$/.test(v.trim()) || /^ㅇ+$/.test(v.trim());
+function parseFill(text){
+  const F = { intro:"", target:"", core:"", s51:{}, refs:[], s52:[], keys:[], inputs:[] }; let hit = 0;
+  text.replace(/\r/g, "").split("\n").forEach(raw => {
+    const l = raw.replace(/\*\*/g, "").replace(/^[\s>*•·\-–]+/, "").trim();
+    const m = l.match(/^\[\s*([^\]]+?)\s*\]\s*[:：]?\s*(.*)$/); if(!m) return;
+    const tag = m[1].replace(/\s/g, ""), val = m[2].replace(/\s*←.*$/, "").trim();
+    const cells = () => { let c = val.split("|").map(x => x.trim()); if(c[0] === "") c.shift(); if(c[c.length-1] === "") c.pop(); return c; };
+    hit++;
+    if(/입력방식/.test(tag)) F.keys = val.split(/[,，/]/).map(x => x.trim()).filter(Boolean);
+    else if(/입력/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.inputs.push([c[0], c.slice(1).join(" | ")]); }
+    else if(/등장/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.s52.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
+    else if(/레퍼런스/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.refs.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
+    else if(/한문장/.test(tag)) F.intro = val;
+    else if(/타깃|타겟/.test(tag)) F.target = val;
+    else if(/핵심/.test(tag)) F.core = val;
+    else if(/시작/.test(tag)) F.s51.start = val;
+    else if(/플레이중|진행/.test(tag)) F.s51.play = val;
+    else if(/클리어|성공/.test(tag)) F.s51.clear = val;
+    else if(/실패/.test(tag)) F.s51.fail = val;
+    else hit--;
+  });
+  return hit ? F : null;
+}
+
+function mergeFill(F){
+  const log = []; let sec = "";
+  const setCell = (c, v, where, quiet) => {
+    if(isBlank(v) || c.ro) return false;
+    const old = (c.val || "").trim(); if(old === v.trim()) return false;
+    c.hl = old ? "chg" : "new"; c.val = v.trim(); if(!quiet) log.push((old ? "✏️ " : "➕ ") + where); return c.hl;
+  };
+  const freeRow = t => t.rows.find(r => r.every(c => c.ro ? false : !(c.val || "").trim()) && !/^예\s*[:：]/.test((r[0].text || r[0].val || "")));
+  const addRow = t => { let r = freeRow(t); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); } return r; };
+  const rowName = r => r[0].ro ? r[0].text : (r[0].val || "");
+  const key = t => normName(String(t || "").replace(/\([^)]*\)|（[^）]*）/g, ""));
+  const findRow = (t, name, playerOk) => {
+    const n = key(name); if(!n) return null;
+    return t.rows.find(r => !/^예\s*[:：]/.test(rowName(r)) && key(rowName(r)) === n)
+      || (playerOk && /플레이어|주인공/.test(name) ? t.rows.find(r => /플레이어/.test(rowName(r))) : null);
+  };
+  const upsert = (t, list, label, playerOk) => list.forEach(item => {
+    let r = findRow(t, item[0], playerOk);
+    if(r){ const res = item.slice(1).map((v, i) => r[i + 1] ? setCell(r[i + 1], v, "", true) : false).filter(Boolean);
+      if(res.length) log.push(`${res.includes("chg") ? "✏️" : "➕"} ${label} · ${item[0]}`); }
+    else { r = addRow(t); r.forEach(c => delete c.hl); item.forEach((v, i) => { if(r[i] && !isBlank(v)){ r[i].val = v; r[i].hl = "new"; } }); log.push(`🆕 ${label} 새로 추가: ${item[0]}`); }
+  });
+  for(const s of W.segs){
+    if(s.t === "raw"){ const h = s.lines.filter(l => /^#{2,3}\s/.test(l)).pop();
+      if(h) sec = /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
+      continue; }
+    if(s.t === "ans" && ["intro","target","core"].includes(sec)){
+      const v = F[sec], old = (s.val || "").trim();
+      if(!isBlank(v) && old !== v.trim()){ s.hl = isBlank(old) ? "new" : "chg"; s.val = v.trim(); log.push(`${s.hl === "new" ? "➕" : "✏️"} ${{intro:"1. 한 문장 소개",target:"2. 타깃 플레이어",core:"4. 핵심 요소"}[sec]}`); }
+    }
+    if(s.t === "table" && sec === "s51") s.rows.forEach(r => {
+      const k = normName(r[0].text || ""), key = /시작/.test(k) ? "start" : /플레이중/.test(k) ? "play" : /클리어/.test(k) ? "clear" : /실패/.test(k) ? "fail" : "";
+      if(key && r[1]) setCell(r[1], F.s51[key] || "", `5-1 ${(r[0].text || "").replace(/\*\*/g, "").replace(/[^\p{L}\p{N}\s]/gu, "").trim()}`);
+    });
+    if(s.t === "table" && sec === "refs") upsert(s, F.refs, "3. 레퍼런스", false);
+    if(s.t === "table" && sec === "s52") upsert(s, F.s52, "5-2 등장", true);
+    if(s.t === "table" && sec === "s53") upsert(s, F.inputs, "5-3 입력", false);
+    if(s.t === "chk" && sec === "s53"){
+      const want = F.keys.some(k => (/키보드/.test(k) && /키보드/.test(s.text)) || (/마우스/.test(k) && /마우스/.test(s.text)));
+      if(want && !s.on){ s.on = true; s.hl = "new"; log.push(`➕ 5-3 입력 방식: ${s.text.replace(/[^\p{L}\s]/gu, "").trim()}`); }
+    }
+  }
+  return log;
+}
+
+let FILL_UNDO = null;
+function runFill(text, msg, list){
+  const F = parseFill(text);
+  if(!F){ msg.textContent = "정해진 형식([1 한 문장 소개] 같은 줄)을 찾지 못했어요. 정리 프롬프트로 다시 받아 주세요."; msg.className = "wr-status err"; return; }
+  if(!(W.doc && W.doc.path === PLAN_PATH && W.segs.length)){
+    try{ sessionStorage.setItem("pendingFill:" + W.st.repo, text); }catch(_){}
+    const i = W.w.docs.findIndex(d => d.path === PLAN_PATH);
+    location.hash = `#/write/${W.w.week}/${W.st.repo}/${i < 0 ? 0 : i}`; return;
+  }
+  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  FILL_UNDO = JSON.stringify(W.segs);
+  const log = mergeFill(F);
+  renderSegs(document.getElementById("wrDoc"));
+  if(!log.length){ msg.textContent = "새로 바뀐 칸이 없어요. 이미 기획서와 같은 내용이에요."; msg.className = "wr-status"; list.innerHTML = ""; return; }
+  markDirty();
+  msg.textContent = `✅ ${log.length}곳을 채웠어요. 노란 칸은 바뀐 곳, 초록 칸은 새로 들어간 곳이에요. 내 말로 다듬은 뒤 💾 저장하기를 눌러요.`; msg.className = "wr-status ok";
+  list.innerHTML = `<ul>${log.map(x => `<li>${esc(x)}</li>`).join("")}</ul><button class="btn" type="button" data-undo>↩️ 채우기 전으로 되돌리기</button>`;
+  list.querySelector("[data-undo]").onclick = () => { W.segs = JSON.parse(FILL_UNDO); renderSegs(document.getElementById("wrDoc")); list.innerHTML = ""; msg.textContent = "되돌렸어요."; msg.className = "wr-status"; };
+}
+function applyPending(){
+  let t = null; try{ t = sessionStorage.getItem("pendingFill:" + W.st.repo); sessionStorage.removeItem("pendingFill:" + W.st.repo); }catch(_){}
+  const box = document.getElementById("wrAi"); if(!t || !box) return;
+  box.open = true; runFill(t, box.querySelector("[data-fmsg]"), box.querySelector("[data-flist]"));
+  box.querySelector("[data-fill-area]").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
 function reviewBox(){
   return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini에게 기획서 점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></summary>
     <ol class="wr-ai-steps">
@@ -519,6 +671,20 @@ function reviewBox(){
     <p class="wr-status" data-msg></p>
     <pre class="wr-ai-out" data-out hidden></pre>
     <div class="wr-ai-follow"><b>💬 질문에 답할 때 보낼 문장</b><pre class="wr-ai-out">${esc(FOLLOW_PROMPT)}</pre><div class="btns"><button class="btn" type="button" data-follow>📋 복사</button></div></div>
+    <div class="wr-ai-fill" data-fill-area>
+      <b>📥 Gemini와 정리한 내용으로 기획서 채우기</b>
+      <ol class="wr-ai-steps">
+        <li>질문에 다 답했으면 <b>정리 프롬프트</b>를 복사해 같은 Gemini 채팅에 보내요. Word 파일을 받아요.</li>
+        <li>받은 Word 파일을 올리거나, Gemini 답을 아래 칸에 붙여 넣고 <b>기획서에 채우기</b>를 눌러요.</li>
+        <li><b>게임 기획서 (보완)</b> 탭에 바뀐 칸(노랑)과 새로 추가된 칸(초록)이 표시돼요. 확인하고 다듬은 뒤 💾 저장해요.</li>
+      </ol>
+      <div class="btns"><button class="btn" type="button" data-fillp>📋 정리 프롬프트 복사</button></div>
+      <div class="wr-ai-drop"><label class="btn"><input type="file" accept=".docx,.txt,.md" data-file hidden>📄 Word 파일 올리기 (.docx)</label><span data-fname class="hint" style="margin:0">또는 아래에 붙여 넣기</span></div>
+      <textarea class="wr-in wr-ai-paste" rows="4" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
+      <div class="btns"><button class="btn primary" type="button" data-fill>✍️ 기획서에 채우기</button></div>
+      <p class="wr-status" data-fmsg></p>
+      <div class="wr-ai-log" data-flist></div>
+    </div>
     <p class="hint">💡 Gemini가 써 준 문장을 그대로 붙이지 말고, 내 생각을 내 말로 고쳐 적어요. 제안이 내 게임과 다르면 따르지 않아도 돼요.</p>
   </details>`;
 }
@@ -538,6 +704,16 @@ function mountReview(){
   };
   cp.onclick = () => copyText(prompt, cp);
   box.querySelector("[data-follow]").onclick = e => copyText(FOLLOW_PROMPT, e.currentTarget);
+  box.querySelector("[data-fillp]").onclick = e => copyText(FILL_PROMPT, e.currentTarget);
+  const fmsg = box.querySelector("[data-fmsg]"), flist = box.querySelector("[data-flist]"), paste = box.querySelector("[data-paste]");
+  box.querySelector("[data-file]").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return; e.target.value = "";
+    box.querySelector("[data-fname]").textContent = "📄 " + f.name;
+    try{ paste.value = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : await f.text(); grow(paste);
+      runFill(paste.value, fmsg, flist); }
+    catch(_){ fmsg.textContent = "파일을 읽지 못했어요. Word(.docx) 파일인지 확인하거나, 내용을 복사해서 붙여 넣어 주세요."; fmsg.className = "wr-status err"; }
+  };
+  box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
 }
 
 /* ---------- 페이지 ---------- */
