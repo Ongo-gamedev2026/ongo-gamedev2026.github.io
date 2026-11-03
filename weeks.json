@@ -33,10 +33,6 @@
         {
           "name": "게임 기획서 (보완)",
           "path": "docs/week3-plan.md"
-        },
-        {
-          "name": "3주차 개발일지",
-          "path": "devlog/week03.md"
         }
       ],
       "game": false

@@ -432,13 +432,15 @@ function drawKey(notice){
 }
 
 
-/* ---------- 🤖 Gemini 기획서 점검 (3주차) ----------
-   3주차 보완 기획서(docs/week3-plan.md)에 내용이 있으면 그것을, 비어 있으면 2주차 기획서(docs/week2-plan.md)를 불러와
-   예시·안내는 빼고 칸별로 정리한 뒤 점검 프롬프트 끝에 붙여 줘요. 4단계 채우기는 3주차 보완 기획서에 채워요.
-   REVIEW_WEEKS에 주차를 넣으면 그 주차 작성하기 화면에 나와요. */
+/* ---------- 🤖 3주차 게임 기획서 (보완) 도우미 ----------
+   ① 2주차 기획서(docs/week2-plan.md)를 불러와 칸별로 정리
+   ② 정리한 기획서를 넣은 Gemini 점검 프롬프트를 자동으로 작성
+   ③ 보완한 내용을 정해진 형식의 Word 파일로 달라고 요청하는 프롬프트
+   ④ Word 파일을 올리면 3주차 기획서(docs/week3-plan.md) 칸에 자동으로 반영 (비어 있으면 2주차 내용을 먼저 깔아요)
+   REVIEW_WEEKS에 주차를 넣으면 그 주차 화면에 나와요. */
 const REVIEW_WEEKS = [3];
 const PLAN_PATH = "docs/week3-plan.md";       // 채우기 대상 (3주차 보완 기획서)
-const SRC_PATHS = ["docs/week3-plan.md", "docs/week2-plan.md"];   // 점검할 때 먼저 찾는 순서
+const SRC_PATH = "docs/week2-plan.md";        // 불러올 2주차 기획서
 function summarizePlan(md){
  const L=md.replace(/\r\n/g,'\n').split('\n');const S={intro:'',target:'',core:'',refs:[],s51:[],s52:[],s53rows:[],s53in:[]};let sec='',tbl=0;
  const cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/\|\s*$/,'');const o=[];let c='';for(let i=0;i<s.length;i++){if(s[i]==='\\'&&s[i+1]==='|'){c+='|';i++;continue}if(s[i]==='|'){o.push(c);c='';continue}c+=s[i]}o.push(c);return o.map(x=>x.replace(/<br\s*\/?>/gi,' / ').trim())};
@@ -465,38 +467,30 @@ function summarizePlan(md){
  out.push(`5-3. 입력 방식: ${S.s53in.length?S.s53in.join(', '):'(비어 있음)'}`);
  out.push(...(S.s53rows.length?S.s53rows.map(r=>`   - ${v(r[0])} → ${v(r[1])}`):['   - (비어 있음)']));
  const filled=[S.intro,S.target,S.core].filter(x=>x&&!/^ㅇ+$/.test(x.trim())).length+S.refs.length+S.s52.filter(r=>r[1]||r[2]).length;
- return {text:out.join('\n'),empty:filled<2};
+ return {text:out.join('\n'),empty:filled<2,S};
 }
 
-const REVIEW_PROMPT = `너는 고등학생의 첫 게임 기획을 도와주는 게임 기획 멘토야.
-맨 아래 [내 게임 기획서]는 내가 2주차에 쓴 게임 기획서야. "(비어 있음)"은 아직 못 쓴 칸이야. 다음 주에 이 기획서를 바탕으로 AI와 함께 "스테이지 1"을 구성요소 하나씩 만들 거야.
+const REVIEW_PROMPT = `너는 고등학생의 첫 게임을 도와주는 게임 기획자야.
+맨 아래 [내 게임 기획서]는 내가 작성한 2주차 게임 기획서야. 이 기획서를 기반으로 보완해야 하는 내용을 알려 줘.
+"(비어 있음)"은 아직 못 쓴 칸이야. 다음 주에는 이 기획서로 AI와 함께 "스테이지 1"을 구성요소 하나씩 만들 거야.
 
 [규칙]
-- 게임 코드는 절대 만들지 마.
-- 기획서를 대신 다시 써 주지 마. 내가 직접 고칠 수 있게 짚어 주고 질문해 줘.
+- 게임 코드는 만들지 마.
 - 내 게임 아이디어와 재미 요소는 바꾸지 마.
 - 고등학생이 이해할 수 있는 쉬운 말로 써 줘.
 
-[이렇게 알려줘]
+[이렇게 알려 줘]
 1. 내가 이해한 게임: 이 게임을 한 문장으로 정리해 줘.
-2. 칸별 점검표: 기획서의 칸(1~4번, 5-1 시작·플레이 중·클리어·실패, 5-2 등장하는 것들, 5-3 입력 방식)마다 아래 표로 알려 줘.
-   | 칸 | 상태(✅ 충분 / 🔺 보완 필요 / ❌ 비어 있음) | 이유 | 내가 답해야 할 질문 |
-3. 꼭 고쳐야 할 것 TOP 3: 스테이지 1을 만들기 전에 반드시 정해야 하는 것. 특히 아래를 확인해 줘.
-   - 숫자가 없는 것 (체력, 속도, 개수, 시간 등)
-   - 클리어·실패 조건이 확인할 수 없게 적힌 것 (예: "막는다" → "몇 마리를 막으면 성공?")
-   - 서로 맞지 않는 것 (예: 입력 방식에는 있는데 등장하는 것에 없는 행동)
-4. 더 추가해야 할 것: 5-1이나 5-3에는 나오는데 5-2 "등장하는 것들"에 빠진 것, 또는 스테이지 1에 꼭 필요한데 없는 것.
-5. 스테이지 1에서 뒤로 미뤄도 되는 것: 처음부터 만들기엔 너무 큰 기능.
-6. 화면 시점 추천: 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중에서 내 게임에 맞는 것과 이유.
-7. 구성요소 만들기 순서: 화면 → 플레이어 → 조작 → … 처럼 스테이지 1을 하나씩 만들 순서를 7~10단계로 적어 줘.
+2. 칸별 점검표: 기획서의 칸(1~4번, 5-1 시작·플레이 중·클리어·실패, 5-2 등장하는 것들, 5-3 입력 방식)마다
+   | 칸 | 상태(✅ 충분 / 🔺 보완 필요 / ❌ 비어 있음) | 이유 |
+3. 보완해야 할 내용: 🔺·❌ 칸을 중요한 순서대로 최대 5개. 칸마다
+   - 정해야 할 것 (숫자가 없는 것, 확인할 수 없는 클리어·실패 조건, 서로 맞지 않는 내용 등)
+   - 내 게임에 맞는 예시 3가지 (서로 다른 방향, 필요하면 숫자 포함)
+4. 더 추가하면 좋은 것: 5-1이나 5-3에는 나오는데 5-2 "등장하는 것들"에 빠진 것, 스테이지 1에 꼭 필요한데 없는 것.
+5. 스테이지 1에서 뒤로 미뤄도 되는 것.
+6. 화면 시점 추천: 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중 하나와 이유.
 
-마지막에 "가장 먼저 답해 줄 질문 3개"를 번호로 물어봐 줘.`;
-const FOLLOW_PROMPT = `네 질문에 대한 내 답이야.
-1. (칸 이름): (고른 예시 번호 또는 내 생각)
-2. (칸 이름): (고른 예시 번호 또는 내 생각)
-3. (칸 이름): (고른 예시 번호 또는 내 생각)
-
-내 답이 기획서의 어느 칸에 들어가야 하는지 알려 주고, 아직 부족한 부분이 있으면 한 가지만 더 물어봐 줘. 기획서는 대신 써 주지 마.`;
+마지막에 "3번에서 어떤 예시를 고를래? 아니면 네 생각을 말해 줘"라고 물어봐 줘.`;
 async function copyText(s, btn){
   try{ await navigator.clipboard.writeText(s); }
   catch(_){ const t = document.createElement("textarea"); t.value = s; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
@@ -513,22 +507,26 @@ async function fetchDoc(path){
   if(r.status === 404) return null; if(!r.ok) throw new Error(r.status); return r.text();
 }
 async function latestPlan(){
-  let last = null;
-  for(const p of SRC_PATHS){
-    const t = await fetchDoc(p); if(t == null) continue;
-    const sm = summarizePlan(t); if(!sm.empty) return { ...sm, from:p }; if(!last) last = { ...sm, from:p };
-  }
-  if(!last) throw new Error("no plan"); return last;
+  const t = await fetchDoc(SRC_PATH); if(t == null) throw new Error("no plan");
+  return summarizePlan(t);
+}
+/* 정리된 2주차 기획서(S) → 채우기 형식(F) */
+function planToFill(S){
+  const k = l => /시작/.test(l) ? "start" : /플레이/.test(l) ? "play" : /클리어/.test(l) ? "clear" : /실패/.test(l) ? "fail" : "";
+  const F = { intro:S.intro, target:S.target, core:S.core, s51:{}, refs:S.refs.map(r => [r[0], r[1] || "", r[2] || ""]),
+    s52:S.s52.filter(r => r[1] || r[2]).map(r => [r[0], r[1], r[2]]), keys:S.s53in.slice(), inputs:S.s53rows.map(r => [r[0], r[1] || ""]) };
+  S.s51.forEach(([l, v]) => { const kk = k(l); if(kk) F.s51[kk] = v; });
+  return F;
 }
 
 /* ---------- 📥 Gemini 정리 결과(Word·글)로 기획서 채우기 ----------
    정해진 [칸 이름] 형식의 줄을 읽어 게임 기획서 (보완) 칸에 채워요.
    바뀐 칸은 고치고, 새로운 레퍼런스·등장하는 것·입력은 줄을 추가해요. 지우지는 않아요. */
-const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로, 내 게임 기획서를 보완한 결과를 아래 형식 그대로 정리해서 Word 문서 파일로 만들어 줘. (파일을 만들 수 없으면 글로 보여 줘.)
+const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로 내 2주차 게임 기획서를 보완해서, 아래 형식 그대로 Word 문서 파일로 만들어 줘. (파일을 만들 수 없으면 글로 보여 줘.)
 
 [규칙]
-- 내가 대화에서 직접 답한 내용만 반영해. 내가 말하지 않은 내용은 새로 지어내지 마.
-- 바뀌지 않은 칸은 원래 기획서 내용을 그대로 써.
+- 내가 대화에서 고르거나 답한 내용을 반영해. 내가 말하지 않은 내용은 새로 지어내지 마.
+- 바뀌지 않은 칸은 원래 2주차 기획서 내용을 그대로 써. 빠뜨리는 칸이 없게 모든 칸을 써.
 - 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 한 칸씩 써. 표로 만들지 마.
 - 레퍼런스, 등장하는 것, 입력은 하나마다 한 줄씩 쓰고, 칸은 | 로 나눠.
 - 아직 정하지 못한 칸은 "(비어 있음)"이라고 써.
@@ -645,17 +643,22 @@ function mergeFill(F){
   return log;
 }
 
-let FILL_UNDO = null;
-function runFill(text, msg, list){
+let FILL_UNDO = null, BASE_FILL = null;
+const formEmpty = () => !W.segs.some(s => (s.t === "ans" && (s.val || "").trim() && !/^ㅇ+$/.test(s.val.trim())) || (s.t === "table" && s.rows.some(r => r.some(c => !c.ro && (c.val || "").trim()))));
+async function loadBase(){ if(BASE_FILL) return BASE_FILL; try{ const t = await fetchDoc(SRC_PATH); if(t) BASE_FILL = planToFill(summarizePlan(t).S); }catch(_){ } return BASE_FILL; }
+async function runFill(text, msg, list){
   const F = parseFill(text);
   if(!F){ msg.textContent = "정해진 형식([1 한 문장 소개] 같은 줄)을 찾지 못했어요. 정리 프롬프트로 다시 받아 주세요."; msg.className = "wr-status err"; return; }
+  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length) await loadBase();
   if(!(W.doc && W.doc.path === PLAN_PATH && W.segs.length)){
     try{ sessionStorage.setItem("pendingFill:" + W.st.repo, text); }catch(_){}
     const i = W.w.docs.findIndex(d => d.path === PLAN_PATH);
     location.hash = `#/write/${W.w.week}/${W.st.repo}/${i < 0 ? 0 : i}`; return;
   }
-  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  const clearHl = () => W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  clearHl();
   FILL_UNDO = JSON.stringify(W.segs);
+  if(formEmpty() && BASE_FILL){ mergeFill(BASE_FILL); clearHl(); }   // 비어 있는 3주차 양식에는 2주차 내용을 먼저 깔아요
   const log = mergeFill(F);
   renderSegs(document.getElementById("wrDoc"));
   if(!log.length){ msg.textContent = "새로 바뀐 칸이 없어요. 이미 기획서와 같은 내용이에요."; msg.className = "wr-status"; list.innerHTML = ""; return; }
@@ -667,81 +670,62 @@ function runFill(text, msg, list){
 function applyPending(){
   let t = null; try{ t = sessionStorage.getItem("pendingFill:" + W.st.repo); sessionStorage.removeItem("pendingFill:" + W.st.repo); }catch(_){}
   const box = document.getElementById("wrAi"); if(!t || !box) return;
-  box.open = true; runFill(t, box.querySelector("[data-fmsg]"), box.querySelector("[data-flist]"));
+  runFill(t, box.querySelector("[data-fmsg]"), box.querySelector("[data-flist]"));
   box.querySelector("[data-fill-area]").scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-const BOOST_PROMPT = `점검해 줘서 고마워. 이제 🔺 보완 필요와 ❌ 비어 있음 칸을 채우고 싶어.
-가장 중요한 칸부터 최대 5칸까지, 칸마다 아래처럼 알려 줘.
-
-[칸 이름]
-- 정해야 할 것: 이 칸에서 무엇을 정해야 하는지 한 줄로
-- 예시 3가지: 내 게임 아이디어에 맞게, 서로 다른 방향으로 (숫자가 필요하면 숫자도 넣어서)
-  ① …  ② …  ③ …
-- 고르면 달라지는 점: 각 예시를 고르면 게임이 어떻게 달라지는지 한 줄씩
-
-[규칙]
-- 내 게임 아이디어와 재미 요소는 바꾸지 마.
-- 정답처럼 하나만 골라 주지 마. 내가 고르거나 내 생각을 말할 수 있게 해 줘.
-- 스테이지 1에 필요한 것만 다뤄 줘. 게임 코드는 만들지 마.
-
-마지막에 "각 칸에서 어떤 걸 고를래? 아니면 네 생각을 말해 줘"라고 물어봐 줘.`;
 function reviewBox(){
-  return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini와 기획서 보완하기 <span>점검 → 보완 요청 → 답하기 → 기획서에 채우기</span></summary>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></div>
-      <p class="hint">버튼을 누르면 내 기획서(3주차 보완 기획서가 비어 있으면 2주차 기획서)가 정리되어 프롬프트 끝에 붙어요. <a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요.</p>
-      <div class="btns"><button class="btn primary" type="button" data-make>🧩 내 기획서로 점검 프롬프트 만들기</button><button class="btn" type="button" data-copy disabled>📋 복사</button></div>
+  return `<section class="wr-ai" id="wrAi">
+    <div class="wr-ai-title">🤖 Gemini와 기획서 보완하기 <span>2주차 기획서 불러오기 → 프롬프트 → Word 파일 → 아래 기획서에 반영</span></div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>2주차 게임 기획서 불러오기</div>
+      <div class="btns"><button class="btn primary" type="button" data-load>📥 2주차 기획서 불러오기</button></div>
       <p class="wr-status" data-msg></p>
-      <pre class="wr-ai-out" data-out hidden></pre>
+      <pre class="wr-ai-out" data-plan hidden></pre>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>보완할 내용 요청하기 <span>부족한 칸마다 고를 수 있는 예시 3가지를 받아요</span></div>
-      <p class="hint">점검 결과를 받은 <b>같은 채팅</b>에 보내요.</p>
-      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(BOOST_PROMPT)}</pre></details>
-      <div class="btns"><button class="btn" type="button" data-boost>📋 보완 요청 프롬프트 복사</button></div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>Gemini에 보완할 내용 요청하기 <span>불러온 기획서가 프롬프트에 자동으로 들어가요</span></div>
+      <p class="hint"><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요. Gemini가 보완할 칸과 예시를 알려 주면, 고르거나 내 생각을 말하며 대화를 이어 가요.</p>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-out>먼저 1단계에서 2주차 기획서를 불러와 주세요.</pre></details>
+      <div class="btns"><button class="btn" type="button" data-copy disabled>📋 보완 요청 프롬프트 복사</button></div>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>내 답 보내기 <span>예시 중에 고르거나 내 생각을 적어요</span></div>
-      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(FOLLOW_PROMPT)}</pre></details>
-      <div class="btns"><button class="btn" type="button" data-follow>📋 답하기 문장 복사</button></div>
-      <p class="hint">( ) 부분을 내 답으로 바꿔서 보내요. 부족한 칸이 남아 있으면 2~3단계를 반복해요. 받은 피드백은 <b>3주차 개발일지 1️⃣</b>에 적어요.</p>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>보완한 기획서를 Word 파일로 받기</div>
+      <p class="hint">보완할 내용을 다 정했으면 <b>같은 채팅</b>에 보내요. Gemini가 Word 파일을 바로 주지 않으면 <b>Google Docs로 내보내기 → 파일 → 다운로드 → Microsoft Word(.docx)</b>로 받아요.</p>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(FILL_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-fillp>📋 Word 파일 요청 프롬프트 복사</button></div>
     </div>
-    <div class="wr-ai-step" data-fill-area><div class="wr-ai-h"><i>4</i>정리해서 기획서에 채우기 <span>바뀐 칸은 고치고, 새로 생긴 것은 줄을 추가해요</span></div>
-      <p class="hint">정리 프롬프트를 같은 채팅에 보내 Word 파일을 받고, 아래에 올리거나 답을 붙여 넣어요. <b>게임 기획서 (보완)</b> 탭에 바뀐 칸(노랑)과 새 칸(초록)이 표시되면 확인하고 다듬은 뒤 💾 저장해요.</p>
-      <div class="btns"><button class="btn" type="button" data-fillp>📋 정리 프롬프트 복사</button></div>
-      <div class="wr-ai-drop"><label class="btn"><input type="file" accept=".docx,.txt,.md" data-file hidden>📄 Word 파일 올리기 (.docx)</label><span data-fname class="hint" style="margin:0">또는 아래에 붙여 넣기</span></div>
-      <textarea class="wr-in wr-ai-paste" rows="4" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
-      <div class="btns"><button class="btn primary" type="button" data-fill>✍️ 기획서에 채우기</button></div>
+    <div class="wr-ai-step" data-fill-area><div class="wr-ai-h"><i>4</i>Word 파일 올려서 기획서에 반영하기 <span>바뀐 칸은 노랑, 새로 생긴 칸은 초록으로 표시돼요</span></div>
+      <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-file hidden>📄 Word 파일 올리기 (.docx)</label><span data-fname class="hint" style="margin:0"></span></div>
+      <details class="wr-ai-peek"><summary>파일이 안 되면: Gemini 답을 붙여 넣기</summary>
+        <textarea class="wr-in wr-ai-paste" rows="4" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
+        <div class="btns"><button class="btn" type="button" data-fill>✍️ 기획서에 반영하기</button></div></details>
       <p class="wr-status" data-fmsg></p>
       <div class="wr-ai-log" data-flist></div>
+      <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>, 다 됐으면 <b>📮 제출하기</b>를 눌러요.</p>
     </div>
-    <p class="hint">💡 Gemini가 써 준 문장을 그대로 붙이지 말고, 내 생각을 내 말로 고쳐 적어요. 제안이 내 게임과 다르면 따르지 않아도 돼요.</p>
-  </details>`;
+  </section>`;
 }
 function mountReview(){
   const box = document.getElementById("wrAi"); if(!box) return;
-  const msg = box.querySelector("[data-msg]"), out = box.querySelector("[data-out]"), cp = box.querySelector("[data-copy]");
+  const msg = box.querySelector("[data-msg]"), plan = box.querySelector("[data-plan]"), out = box.querySelector("[data-out]"), cp = box.querySelector("[data-copy]");
   let prompt = "";
-  box.querySelector("[data-make]").onclick = async () => {
-    msg.textContent = "기획서를 불러오는 중…"; msg.className = "wr-status";
+  box.querySelector("[data-load]").onclick = async () => {
+    msg.textContent = "2주차 기획서를 불러오는 중…"; msg.className = "wr-status";
     try{
-      const sm = await latestPlan();
-      prompt = REVIEW_PROMPT + "\n\n" + sm.text;
-      out.textContent = prompt; out.hidden = false; cp.disabled = false;
-      const from = /week3/.test(sm.from) ? "3주차 보완 기획서" : "2주차 기획서";
-      msg.textContent = sm.empty ? "⚠️ 기획서가 거의 비어 있어요. 게임 기획서 (보완) 탭에서 1~5번을 먼저 채우면 더 좋은 피드백을 받을 수 있어요." : `✅ ${from}로 만들었어요. 복사해서 Gemini에 붙여 넣으세요.`;
+      const sm = await latestPlan(); BASE_FILL = planToFill(sm.S);
+      plan.textContent = sm.text; plan.hidden = false;
+      prompt = REVIEW_PROMPT + "\n\n" + sm.text; out.textContent = prompt; cp.disabled = false;
+      msg.textContent = sm.empty ? "⚠️ 2주차 기획서가 거의 비어 있어요. 그래도 Gemini에게 보내면 무엇부터 정할지 함께 정리할 수 있어요." : "✅ 불러왔어요. 2단계에서 프롬프트를 복사하세요.";
       msg.className = "wr-status " + (sm.empty ? "warn" : "ok");
-    }catch(e){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
+    }catch(e){ msg.textContent = "2주차 기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
   cp.onclick = () => copyText(prompt, cp);
-  box.querySelector("[data-follow]").onclick = e => copyText(FOLLOW_PROMPT, e.currentTarget);
-  box.querySelector("[data-boost]").onclick = e => copyText(BOOST_PROMPT, e.currentTarget);
   box.querySelector("[data-fillp]").onclick = e => copyText(FILL_PROMPT, e.currentTarget);
   const fmsg = box.querySelector("[data-fmsg]"), flist = box.querySelector("[data-flist]"), paste = box.querySelector("[data-paste]");
   box.querySelector("[data-file]").onchange = async e => {
     const f = e.target.files[0]; if(!f) return; e.target.value = "";
     box.querySelector("[data-fname]").textContent = "📄 " + f.name;
-    try{ paste.value = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : await f.text(); grow(paste);
-      runFill(paste.value, fmsg, flist); }
-    catch(_){ fmsg.textContent = "파일을 읽지 못했어요. Word(.docx) 파일인지 확인하거나, 내용을 복사해서 붙여 넣어 주세요."; fmsg.className = "wr-status err"; }
+    try{ paste.value = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : await f.text(); }
+    catch(_){ fmsg.textContent = "파일을 읽지 못했어요. Word(.docx) 파일인지 확인하거나, 아래 '붙여 넣기'를 이용해 주세요."; fmsg.className = "wr-status err"; return; }
+    runFill(paste.value, fmsg, flist);
   };
   box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
 }
