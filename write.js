@@ -490,9 +490,9 @@ const REVIEW_PROMPT = `너는 고등학생의 첫 게임 기획을 도와주는 
 
 마지막에 "가장 먼저 답해 줄 질문 3개"를 번호로 물어봐 줘.`;
 const FOLLOW_PROMPT = `네 질문에 대한 내 답이야.
-1. (내 답)
-2. (내 답)
-3. (내 답)
+1. (칸 이름): (고른 예시 번호 또는 내 생각)
+2. (칸 이름): (고른 예시 번호 또는 내 생각)
+3. (칸 이름): (고른 예시 번호 또는 내 생각)
 
 내 답이 기획서의 어느 칸에 들어가야 하는지 알려 주고, 아직 부족한 부분이 있으면 한 가지만 더 물어봐 줘. 기획서는 대신 써 주지 마.`;
 async function copyText(s, btn){
@@ -660,24 +660,41 @@ function applyPending(){
   box.querySelector("[data-fill-area]").scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
+const BOOST_PROMPT = `점검해 줘서 고마워. 이제 🔺 보완 필요와 ❌ 비어 있음 칸을 채우고 싶어.
+가장 중요한 칸부터 최대 5칸까지, 칸마다 아래처럼 알려 줘.
+
+[칸 이름]
+- 정해야 할 것: 이 칸에서 무엇을 정해야 하는지 한 줄로
+- 예시 3가지: 내 게임 아이디어에 맞게, 서로 다른 방향으로 (숫자가 필요하면 숫자도 넣어서)
+  ① …  ② …  ③ …
+- 고르면 달라지는 점: 각 예시를 고르면 게임이 어떻게 달라지는지 한 줄씩
+
+[규칙]
+- 내 게임 아이디어와 재미 요소는 바꾸지 마.
+- 정답처럼 하나만 골라 주지 마. 내가 고르거나 내 생각을 말할 수 있게 해 줘.
+- 스테이지 1에 필요한 것만 다뤄 줘. 게임 코드는 만들지 마.
+
+마지막에 "각 칸에서 어떤 걸 고를래? 아니면 네 생각을 말해 줘"라고 물어봐 줘.`;
 function reviewBox(){
-  return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini에게 기획서 점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></summary>
-    <ol class="wr-ai-steps">
-      <li><b>내 기획서로 프롬프트 만들기</b>를 눌러요. 지금 저장된 기획서가 정리되어 프롬프트 끝에 붙어요.</li>
-      <li><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요. 이번엔 코드를 만들지 않아요.</li>
-      <li>Gemini의 질문에 답하면서 <b>게임 기획서 (보완)</b> 탭을 고치고, 받은 피드백은 <b>3주차 개발일지 1️⃣</b>에 적어요.</li>
-    </ol>
-    <div class="btns"><button class="btn primary" type="button" data-make>🧩 내 기획서로 프롬프트 만들기</button><button class="btn" type="button" data-copy disabled>📋 프롬프트 복사</button></div>
-    <p class="wr-status" data-msg></p>
-    <pre class="wr-ai-out" data-out hidden></pre>
-    <div class="wr-ai-follow"><b>💬 질문에 답할 때 보낼 문장</b><pre class="wr-ai-out">${esc(FOLLOW_PROMPT)}</pre><div class="btns"><button class="btn" type="button" data-follow>📋 복사</button></div></div>
-    <div class="wr-ai-fill" data-fill-area>
-      <b>📥 Gemini와 정리한 내용으로 기획서 채우기</b>
-      <ol class="wr-ai-steps">
-        <li>질문에 다 답했으면 <b>정리 프롬프트</b>를 복사해 같은 Gemini 채팅에 보내요. Word 파일을 받아요.</li>
-        <li>받은 Word 파일을 올리거나, Gemini 답을 아래 칸에 붙여 넣고 <b>기획서에 채우기</b>를 눌러요.</li>
-        <li><b>게임 기획서 (보완)</b> 탭에 바뀐 칸(노랑)과 새로 추가된 칸(초록)이 표시돼요. 확인하고 다듬은 뒤 💾 저장해요.</li>
-      </ol>
+  return `<details class="wr-ai" id="wrAi"><summary>🤖 Gemini와 기획서 보완하기 <span>점검 → 보완 요청 → 답하기 → 기획서에 채우기</span></summary>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>점검받기 <span>고쳐야 할 칸과 더 적어야 할 내용을 알려 줘요</span></div>
+      <p class="hint">버튼을 누르면 내 기획서가 정리되어 프롬프트 끝에 붙어요. <a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a> 새 채팅에 붙여 넣고 보내요.</p>
+      <div class="btns"><button class="btn primary" type="button" data-make>🧩 내 기획서로 점검 프롬프트 만들기</button><button class="btn" type="button" data-copy disabled>📋 복사</button></div>
+      <p class="wr-status" data-msg></p>
+      <pre class="wr-ai-out" data-out hidden></pre>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>보완할 내용 요청하기 <span>부족한 칸마다 고를 수 있는 예시 3가지를 받아요</span></div>
+      <p class="hint">점검 결과를 받은 <b>같은 채팅</b>에 보내요.</p>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(BOOST_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-boost>📋 보완 요청 프롬프트 복사</button></div>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>내 답 보내기 <span>예시 중에 고르거나 내 생각을 적어요</span></div>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(FOLLOW_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-follow>📋 답하기 문장 복사</button></div>
+      <p class="hint">( ) 부분을 내 답으로 바꿔서 보내요. 부족한 칸이 남아 있으면 2~3단계를 반복해요. 받은 피드백은 <b>3주차 개발일지 1️⃣</b>에 적어요.</p>
+    </div>
+    <div class="wr-ai-step" data-fill-area><div class="wr-ai-h"><i>4</i>정리해서 기획서에 채우기 <span>바뀐 칸은 고치고, 새로 생긴 것은 줄을 추가해요</span></div>
+      <p class="hint">정리 프롬프트를 같은 채팅에 보내 Word 파일을 받고, 아래에 올리거나 답을 붙여 넣어요. <b>게임 기획서 (보완)</b> 탭에 바뀐 칸(노랑)과 새 칸(초록)이 표시되면 확인하고 다듬은 뒤 💾 저장해요.</p>
       <div class="btns"><button class="btn" type="button" data-fillp>📋 정리 프롬프트 복사</button></div>
       <div class="wr-ai-drop"><label class="btn"><input type="file" accept=".docx,.txt,.md" data-file hidden>📄 Word 파일 올리기 (.docx)</label><span data-fname class="hint" style="margin:0">또는 아래에 붙여 넣기</span></div>
       <textarea class="wr-in wr-ai-paste" rows="4" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
@@ -704,6 +721,7 @@ function mountReview(){
   };
   cp.onclick = () => copyText(prompt, cp);
   box.querySelector("[data-follow]").onclick = e => copyText(FOLLOW_PROMPT, e.currentTarget);
+  box.querySelector("[data-boost]").onclick = e => copyText(BOOST_PROMPT, e.currentTarget);
   box.querySelector("[data-fillp]").onclick = e => copyText(FILL_PROMPT, e.currentTarget);
   const fmsg = box.querySelector("[data-fmsg]"), flist = box.querySelector("[data-flist]"), paste = box.querySelector("[data-paste]");
   box.querySelector("[data-file]").onchange = async e => {
