@@ -451,7 +451,7 @@ function summarizePlan(md){
  const cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/\|\s*$/,'');const o=[];let c='';for(let i=0;i<s.length;i++){if(s[i]==='\\'&&s[i+1]==='|'){c+='|';i++;continue}if(s[i]==='|'){o.push(c);c='';continue}c+=s[i]}o.push(c);return o.map(x=>x.replace(/<br\s*\/?>/gi,' / ').trim())};
  const clean=t=>t.replace(/\*\*/g,'').replace(/[^\p{L}\p{N}\s()·,./-]/gu,'').replace(/\s+/g,' ').trim();
  for(const l of L){
-  if(/^#{2,3}\s/.test(l)){tbl=0;sec=/5-5|화면 그림/.test(l)?'':/5-4|화면 시점/.test(l)?'view':/6️⃣|더 추가/.test(l)?'extra':/한 문장/.test(l)?'intro':/타깃|타겟/.test(l)?'target':/레퍼런스/.test(l)?'refs':/핵심/.test(l)?'core':/5-1/.test(l)?'s51':/5-2/.test(l)?'s52':/5-3/.test(l)?'s53':(/5️⃣|스테이지 1 만들어/.test(l)?'':sec);continue}
+  if(/^#{2,3}\s/.test(l)){tbl=0;sec=/화면 그림/.test(l)?'':/5-4|화면 시점/.test(l)?'view':/6️⃣|더 추가/.test(l)?'extra':/한 문장/.test(l)?'intro':/타깃|타겟/.test(l)?'target':/레퍼런스/.test(l)?'refs':/핵심/.test(l)?'core':/5-1/.test(l)?'s51':/5-2/.test(l)?'s52':/5-3/.test(l)?'s53':(/5️⃣|스테이지 1 만들어/.test(l)?'':sec);continue}
   let m;
   if((m=l.match(/^\*\*답:\*\*[ \t]*(.*)$/))&&['intro','target','core','view'].includes(sec)){S[sec]=m[1].trim();continue}
   if((m=l.match(/^\s*-\s*\[(x|X)\]\s*(.*)$/))&&sec==='s53'){S.s53in.push(clean(m[2]));continue}
@@ -639,7 +639,7 @@ async function uploadPic(k, file, msg){
     LOCAL_IMG[path] = URL.createObjectURL(im.blob);
     setPicLine(k, rel); renderSegs(document.getElementById("wrDoc")); markDirty();
     const saved = await save(true);
-    msg.textContent = saved ? `✅ ${IMG[k].alt}을 올려서 기획서 5-5에 넣었어요.` : `그림은 올렸어요. 아래 💾 저장하기를 눌러 기획서에도 넣어 주세요.`;
+    msg.textContent = saved ? `✅ ${IMG[k].alt}을 올려서 기획서 맨 아래 7️⃣ 칸에 넣었어요.` : `그림은 올렸어요. 아래 💾 저장하기를 눌러 기획서에도 넣어 주세요.`;
     msg.className = "wr-status " + (saved ? "ok" : "warn");
     document.getElementById("wrDoc").querySelector("img[data-pic='" + k + "']")?.scrollIntoView({ behavior:"smooth", block:"center" });
   }catch(e){ msg.textContent = e.message || "그림을 올리지 못했어요."; msg.className = "wr-status err"; }
@@ -721,7 +721,7 @@ const EXTRA_MD = {
 |---|---|
 |  |  |
 `};
-const secOf = (h, sec) => /5-4|화면 시점/.test(h) ? "view" : /6️⃣|더 추가/.test(h) ? "extra" : /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
+const secOf = (h, sec) => /화면 그림/.test(h) ? "pic" : /5-4|화면 시점/.test(h) ? "view" : /6️⃣|더 추가/.test(h) ? "extra" : /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
 /* re 제목이 든 조각 번호 (없으면 -1) */
 const headAt = re => W.segs.findIndex(s => s.t === "raw" && s.lines.some(l => /^#{2,3}\s/.test(l) && re.test(l)));
 /* md를 넣어요. before 제목이 있으면 그 제목 바로 앞(바로 위 --- 포함), 없으면 마지막 --- 앞 */
@@ -736,7 +736,9 @@ function insertSec(md, before){
 }
 const IMG = { sketch:{ alt:"내 손그림", file:"week3-sketch", label:"✏️ 내 손그림" }, mockup:{ alt:"Gemini 목업", file:"week3-mockup", label:"🖼️ Gemini 목업" } };
 const imgWait = k => `_(${IMG[k].alt}을 아직 올리지 않았어요)_`;
-const PIC_MD = `### 5-5. 스테이지 1 화면 그림
+const PIC_MD = `---
+
+## 7️⃣ 스테이지 1 화면 그림
 
 > 그림판이나 종이에 그린 스테이지 1 화면과, 그 그림으로 Gemini에게 받은 목업을 올립니다.
 
@@ -750,16 +752,16 @@ ${imgWait("mockup")}
 `;
 /* 5-5 칸의 그림 줄을 바꿔요 (칸이 없으면 5-4 다음에 만들어요) */
 function setPicLine(k, rel){
-  if(headAt(/5-5|화면 그림/) < 0) insertSec(PIC_MD, [/6️⃣|더 추가/]);
-  const s = W.segs[headAt(/5-5|화면 그림/)];
+  if(headAt(/화면 그림/) < 0) insertSec(PIC_MD);     // 기획서 맨 끝(마지막 --- 앞)
+  const s = W.segs[headAt(/화면 그림/)];
   const re = new RegExp("^!\\[" + IMG[k].alt + "\\]|" + IMG[k].alt + "을 아직");
   const i = s.lines.findIndex(l => re.test(l)), line = `![${IMG[k].alt}](${rel})`;
   if(i >= 0) s.lines[i] = line;
   else { const h = s.lines.findIndex(l => l.includes(IMG[k].label)); s.lines.splice(h < 0 ? s.lines.length : h + 1, 0, "", line); }
 }
 function ensureExtraSecs(F){
-  if(!isBlank(F.view) && headAt(/5-4|화면 시점/) < 0) insertSec(EXTRA_MD.view, [/5-5|화면 그림/, /6️⃣|더 추가/]);
-  if(F.extras.length && headAt(/6️⃣|더 추가/) < 0) insertSec(EXTRA_MD.extra);
+  if(!isBlank(F.view) && headAt(/5-4|화면 시점/) < 0) insertSec(EXTRA_MD.view, [/6️⃣|더 추가/, /화면 그림/]);
+  if(F.extras.length && headAt(/6️⃣|더 추가/) < 0) insertSec(EXTRA_MD.extra, [/화면 그림/]);
 }
 function mergeFill(F){
   const log = []; let sec = "";
@@ -890,9 +892,14 @@ function reviewBox(){
         <div class="btns"><button class="btn" type="button" data-fill>✍️ 기획서에 반영하기</button></div></details>
       <p class="wr-status" data-fmsg></p>
       <div class="wr-ai-log" data-flist></div>
-      <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>를 눌러요.</p>
+      <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>를 눌러요. 기획서를 다 쓰면 맨 아래 <b>🎨 스테이지 1 화면 그리고 목업 받기</b>로 이어져요.</p>
     </div>
-    <div class="wr-ai-step" data-pic-area><div class="wr-ai-h"><i>5</i>스테이지 1 화면 그리고 목업 받기 <span>그림은 기획서 5-5에 들어가요</span></div>
+  </section>`;
+}
+function picBox(){
+  return `<section class="wr-ai" id="wrPic" style="margin-top:18px">
+    <div class="wr-ai-title">🎨 스테이지 1 화면 그리고 목업 받기 <span>기획서를 다 쓴 다음에 해요 · 그림은 기획서 맨 아래 7️⃣ 칸에 들어가요</span></div>
+    <div class="wr-ai-step">
       <ol class="wr-ai-steps">
         <li><b>그림판이나 종이</b>에 스테이지 1 화면을 그려요. 잘 그릴 필요 없어요. 플레이어·등장하는 것·점수·버튼이 <b>어디에 있는지</b>만 보이면 되고, 이름을 옆에 적어 두면 좋아요.</li>
         <li>그린 그림을 저장하거나 사진을 찍어서 아래 <b>✏️ 내 손그림 올리기</b>로 올려요.</li>
@@ -901,14 +908,24 @@ function reviewBox(){
       </ol>
       <details class="wr-ai-peek" data-mock-peek><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-mock-out>${esc(MOCKUP_PROMPT.replace("{{CHECK}}", "[확인할 목록]\n(내 기획서의 5-2 등장하는 것들과 5-3 입력이 자동으로 들어가요)"))}</pre></details>
       <div class="btns"><button class="btn" type="button" data-mockp>📋 목업 요청 프롬프트 복사 (내 기획서 포함)</button></div>
-      <div class="wr-ai-drop" data-pic-drop>
+      <div class="wr-ai-drop">
         <label class="btn primary"><input type="file" accept="image/*" data-pic="sketch" hidden>✏️ 내 손그림 올리기</label>
         <label class="btn primary"><input type="file" accept="image/*" data-pic="mockup" hidden>🖼️ Gemini 목업 올리기</label>
       </div>
       <p class="wr-status" data-pmsg></p>
-      <p class="hint">다 됐으면 아래 <b>📮 제출하기</b>를 눌러요.</p>
+      <p class="hint">그림을 올리면 기획서에 자동으로 저장돼요. 다 됐으면 아래 <b>📮 제출하기</b>를 눌러요.</p>
     </div>
   </section>`;
+}
+function mountPic(){
+  const box = document.getElementById("wrPic"); if(!box) return;
+  const pmsg = box.querySelector("[data-pmsg]"), mockOut = box.querySelector("[data-mock-out]");
+  const fullMock = async () => { const sm = await planForMockup();
+    const t = MOCKUP_PROMPT.replace("{{CHECK}}", checkList(sm && sm.S)) + "\n\n" + (sm ? sm.text : "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)");
+    mockOut.textContent = t; return t; };
+  box.querySelector("[data-mock-peek]").addEventListener("toggle", e => { if(e.target.open) fullMock(); });
+  box.querySelector("[data-mockp]").onclick = async e => { const b = e.currentTarget; copyText(await fullMock(), b); };
+  box.querySelectorAll("input[data-pic]").forEach(inp => inp.onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) uploadPic(inp.dataset.pic, f, pmsg); });
 }
 function mountReview(){
   const box = document.getElementById("wrAi"); if(!box) return;
@@ -935,18 +952,6 @@ function mountReview(){
     runFill(paste.value, fmsg, flist);
   };
   box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
-  const pmsg = box.querySelector("[data-pmsg]"), mockOut = box.querySelector("[data-mock-out]");
-  const fullMock = async () => { const sm = await planForMockup();
-    const t = MOCKUP_PROMPT.replace("{{CHECK}}", checkList(sm && sm.S)) + "\n\n" + (sm ? sm.text : "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)");
-    mockOut.textContent = t; return t; };
-  box.querySelector("[data-mock-peek]").addEventListener("toggle", e => { if(e.target.open) fullMock(); });
-  box.querySelector("[data-mockp]").onclick = async e => { const b = e.currentTarget; copyText(await fullMock(), b); };
-  if(W.doc && W.doc.path === PLAN_PATH){
-    box.querySelectorAll("input[data-pic]").forEach(inp => inp.onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) uploadPic(inp.dataset.pic, f, pmsg); });
-  }else{
-    const i = W.w.docs.findIndex(d => d.path === PLAN_PATH);
-    box.querySelector("[data-pic-drop]").innerHTML = `<a class="btn primary" href="#/write/${W.w.week}/${esc(W.st.repo)}/${i < 0 ? 0 : i}">✏️ 작성하기에서 그림 올리기</a>`;
-  }
 }
 
 /* ---------- 페이지 ---------- */
@@ -960,6 +965,7 @@ function view(n, repo, docIdx){
     <div id="wrKey"></div>
     ${REVIEW_WEEKS.includes(w.week) ? reviewBox() : ""}
     <div class="paper wr"><div id="wrDoc"></div></div>
+    ${REVIEW_WEEKS.includes(w.week) && d.path === PLAN_PATH ? picBox() : ""}
     <div class="wr-bar">
       <span id="wrStatus" class="wr-status"></span>
       <a class="btn" href="${repoUrl(st)}/edit/main/${esc(d.path)}" target="_blank" rel="noopener" title="GitHub 화면에서 직접 고치기">GitHub에서 열기</a>
@@ -970,7 +976,7 @@ function view(n, repo, docIdx){
 function mount(n, repo, docIdx){
   const w = findWeek(n), st = findStu(repo); if(!w || !st) return;
   W.w = w; W.st = st; W.doc = w.docs[Math.min(+docIdx || 0, w.docs.length - 1)];
-  drawKey(); load(); mountReview();
+  drawKey(); load(); mountReview(); mountPic();
   document.getElementById("wrSave").onclick = () => save();
   document.getElementById("wrSubmit").onclick = openSubmit;
 }
