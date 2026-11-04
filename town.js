@@ -1,5 +1,5 @@
-/* 온고 게임제작반 마을 — 알만툴 느낌의 탑다운 마을 / 학생 집 (그림은 모두 코드로 그린 도트)
-   나중에 그림을 바꾸려면 아래 ART 부분의 함수만 바꾸면 됩니다. */
+/* 온고 게임제작반 마을 — 탑다운 마을 / 학생 집 (그림은 모두 코드로 그려요)
+   마을 = ART 2(부드러운 일러스트), 집 안 = ART(도트). 그림을 바꾸려면 ART 부분의 함수만 바꾸면 됩니다. */
 (function(){
 "use strict";
 const T = 16;          // 타일 한 칸 = 16px (화면에서는 S배로 확대)
@@ -62,12 +62,12 @@ function drawHouse(c, hx, hy, roof, lit){
   const dx = x+2*T+2; R(c, dx, y+3*T-2, 12, T+2, C.door2); R(c, dx+1, y+3*T-1, 10, T+1, C.door); R(c, dx+8, y+3*T+8, 2, 2, "#ffd54a");
 }
 function drawLibrary(c, hx, hy){
-  const x = hx*T, y = hy*T, W = 5*T;
+  const x = hx*T, y = hy*T, W = 6*T;
   R(c, x+1, y+T, W-2, 3*T, "#e9e2d0");
-  for (let i=0;i<4;i++) R(c, x+6+i*19, y+T+10, 5, 2*T+6, "#cfc5ad");
-  R(c, x, y+T-2, W, 6, "#7b8aa0"); for (let i=0;i<T;i++){ const inset = Math.max(0, 40 - i*3); if (inset>=W/2) continue; R(c, x+inset, y+i, W-inset*2, 1, "#5d6d86"); }
-  const dx = x+2*T; R(c, dx, y+3*T-2, T, T+2, "#3e4a5e"); R(c, dx+1, y+3*T-1, T-2, T+1, "#5b6b84");
-  R(c, x+28, y+T+6, 24, 7, "#fff"); R(c, x+31, y+T+8, 18, 3, "#3e4a5e");
+  for (let i=0;i<5;i++) R(c, x+7+i*19, y+T+10, 5, 2*T+6, "#cfc5ad");
+  R(c, x, y+T-2, W, 6, "#7b8aa0"); for (let i=0;i<T;i++){ const inset = Math.max(0, 48 - i*3); if (inset>=W/2) continue; R(c, x+inset, y+i, W-inset*2, 1, "#5d6d86"); }
+  const dx = x+2*T+8; R(c, dx, y+3*T-2, T, T+2, "#3e4a5e"); R(c, dx+1, y+3*T-1, T-2, T+1, "#5b6b84");
+  R(c, x+36, y+T+6, 24, 7, "#fff"); R(c, x+39, y+T+8, 18, 3, "#3e4a5e");
 }
 function drawBoard(c, tx, ty){
   drawGrass(c, tx, ty); drawGrass(c, tx+1, ty); const x = tx*T, y = ty*T;
@@ -127,29 +127,158 @@ function drawPlayer(c, x, y, dir, frame){
     if (dir===2){ R(c, x+10, y+5, 1, 2, C.ink); R(c, x+4, y+2, 3, 5, C.hair); } }
 }
 
+
+/* ================= ART 2: 마을 — 부드러운 일러스트 =================
+   마을(바깥)은 매끈한 그림, 집 안은 도트 그림이에요.
+   좌표 단위: 한 칸 = 32 (그릴 때 화면 크기에 맞게 늘려요) */
+const K = 32;
+const F = {
+  grassTop:"#9fd77a", grassBot:"#86c867", path:"#f3dfb0", pathEdge:"#e4c98e",
+  wall:"#fff4de", wall2:"#f1dfbd", trunk:"#8a5a35", leaf:"#3f9a4a", leaf2:"#56b65e",
+  winLit:"#ffe58a", win:"#cfeaff", shadow:"rgba(30,60,20,.22)", fence:"#c99a62", fence2:"#e2b57a"
+};
+const ROOF2 = ["#e5604f","#f0954a","#4f8fe0","#9a6fe0","#ea72a8","#3fb3a6","#d8b23c","#6c7f99"];
+function shade(hex, amt){ const n = parseInt(hex.slice(1),16); const f = v => Math.max(0, Math.min(255, Math.round(v + amt*255)));
+  return `rgb(${f(n>>16)},${f(n>>8&255)},${f(n&255)})`; }
+function rr(c, x, y, w, h, r){ c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else roundRect(c, x, y, w, h, Array.isArray(r) ? r[0] : r); }
+function circle(c, x, y, r, col){ c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill(); }
+
+function fGround(c, m){
+  const g = c.createLinearGradient(0, 0, 0, m.H*K); g.addColorStop(0, F.grassTop); g.addColorStop(1, F.grassBot);
+  c.fillStyle = g; c.fillRect(0, 0, m.W*K, m.H*K);
+  for (let i=0;i<260;i++){ c.fillStyle = "rgba(255,255,255,.18)"; c.beginPath(); c.ellipse(rand(i,1)*m.W*K, rand(2,i)*m.H*K, 6, 3, 0, 0, 7); c.fill(); }
+}
+function fPaths(c, m){
+  // 길 칸을 가로/세로 띠로 묶어서 둥근 모서리로 그려요
+  const isP = (x,y) => m.tiles[y*m.W+x] === "path";
+  c.fillStyle = F.path; c.strokeStyle = F.pathEdge; c.lineWidth = 3;
+  const bands = [];
+  for (let y=0;y<m.H;y++){ let x=0; while (x<m.W){ if (!isP(x,y)){ x++; continue; } let e=x; while (e<m.W && isP(e,y)) e++; if (e-x>2) bands.push([x,y,e-x,1]); x=e; } }
+  for (let x=0;x<m.W;x++){ let y=0; while (y<m.H){ if (!isP(x,y)){ y++; continue; } let e=y; while (e<m.H && isP(x,e)) e++; if (e-y>2) bands.push([x,y,1,e-y]); y=e; } }
+  // 가로 띠, 세로 2칸 띠는 하나로
+  const draw = (x,y,w,h,stroke) => { rr(c, x*K+4, y*K+4, w*K-8, h*K-8, 14); c.fill(); if (stroke) c.stroke(); };
+  const merged = []; bands.forEach(b => { if (b[2]===1){ const prev = merged.find(o => o[2]>=1 && o[3]===b[3] && o[1]===b[1] && o[0]+o[2]===b[0] && o[3]>1); if (prev){ prev[2]++; return; } } merged.push(b.slice()); });
+  merged.forEach(b => draw(...b, true));
+  merged.forEach(b => { c.fillRect(b[0]*K+6, b[1]*K+6, b[2]*K-12, b[3]*K-12); });
+}
+function fFlower(c, tx, ty){
+  for (let j=0;j<2;j++){
+    const x = tx*K + 6 + rand(tx,ty,j)*20, y = ty*K + 6 + rand(ty,tx,j)*20, col = ["#fff","#ffd84d","#ff8fb5","#c8a6ff"][Math.floor(rand(tx,ty,j+5)*4)];
+    for (let k=0;k<5;k++) circle(c, x+Math.cos(k*1.26)*3, y+Math.sin(k*1.26)*3, 2.6, col);
+    circle(c, x, y, 1.8, "#ffb02e");
+  }
+}
+function fTree(c, tx, ty){
+  const cx = tx*K+16, cy = ty*K+18, s = 1.08;
+  c.fillStyle = F.shadow; c.beginPath(); c.ellipse(cx, cy+12*s, 15*s, 6*s, 0, 0, 7); c.fill();
+  c.fillStyle = F.trunk; rr(c, cx-3*s, cy, 6*s, 13*s, 2); c.fill();
+  circle(c, cx, cy-6*s, 15*s, F.leaf); circle(c, cx-4*s, cy-10*s, 10*s, F.leaf2); circle(c, cx-7*s, cy-14*s, 4*s, "rgba(255,255,255,.35)");
+}
+function fFence(c, tx, ty){
+  const x = tx*K, y = ty*K + K/2;
+  c.strokeStyle = F.fence; c.lineWidth = 4; c.lineCap = "round";
+  c.beginPath(); c.moveTo(x+2, y-4); c.lineTo(x+K-2, y-4); c.moveTo(x+2, y+6); c.lineTo(x+K-2, y+6); c.stroke();
+  for (const dx of [8, 24]){ c.fillStyle = F.fence2; rr(c, x+dx-3, y-14, 6, 26, 3); c.fill(); }
+}
+function fBoard(c, tx, ty){
+  const x = tx*K, y = ty*K;
+  c.fillStyle = F.shadow; c.beginPath(); c.ellipse(x+32, y+30, 30, 5, 0, 0, 7); c.fill();
+  c.fillStyle = F.trunk; c.fillRect(x+10, y+10, 5, 20); c.fillRect(x+49, y+10, 5, 20);
+  c.fillStyle = "#a8703f"; rr(c, x+2, y-6, 60, 26, 6); c.fill(); c.fillStyle = "#fff5dc"; rr(c, x+6, y-2, 52, 18, 4); c.fill();
+  [["#ff9a8a",10],["#9ad0ff",24],["#c6f29b",38]].forEach(([col,dx]) => { c.fillStyle = col; rr(c, x+dx, y+1, 11, 12, 2); c.fill(); });
+}
+function fHouse(c, hx, hy, roof, lit){
+  const x = hx*K, y = hy*K, w = 5*K, h = 4*K;
+  c.fillStyle = F.shadow; c.beginPath(); c.ellipse(x+w/2, y+h-2, w/2+4, 10, 0, 0, 7); c.fill();
+  c.fillStyle = F.wall; rr(c, x+12, y+56, w-24, h-58, 6); c.fill();
+  c.fillStyle = F.wall2; c.fillRect(x+12, y+h-14, w-24, 12);
+  // 굴뚝
+  c.fillStyle = "#b07a5a"; rr(c, x+w-48, y+18, 12, 26, 2); c.fill(); c.fillStyle = "#8d5f45"; rr(c, x+w-50, y+16, 16, 5, 2); c.fill();
+  // 지붕
+  c.fillStyle = shade(roof, -.18); c.beginPath(); c.moveTo(x+2, y+64); c.lineTo(x+w/2, y+10); c.lineTo(x+w-2, y+64); c.closePath(); c.fill();
+  c.fillStyle = roof; c.beginPath(); c.moveTo(x+6, y+58); c.lineTo(x+w/2, y+8); c.lineTo(x+w-6, y+58); c.closePath(); c.fill();
+  c.fillStyle = "rgba(255,255,255,.25)"; c.beginPath(); c.moveTo(x+w/2, y+8); c.lineTo(x+w/2-12, y+20); c.lineTo(x+24, y+50); c.lineTo(x+10, y+58); c.closePath(); c.fill();
+  // 창문 (제출한 집은 불이 켜져요)
+  for (const wx of [x+22, x+w-50]){
+    c.fillStyle = "#fff"; rr(c, wx-2, y+74, 32, 26, 6); c.fill();
+    c.fillStyle = lit ? F.winLit : F.win; rr(c, wx+1, y+77, 26, 20, 4); c.fill();
+    c.fillStyle = "#fff"; c.fillRect(wx+13, y+77, 2, 20); c.fillRect(wx+1, y+86, 26, 2);
+    c.fillStyle = shade(roof, -.05); rr(c, wx-4, y+100, 36, 5, 2); c.fill();
+  }
+  // 문 + 화분
+  c.fillStyle = shade(roof, -.25); rr(c, x+w/2-13, y+h-46, 26, 44, [13,13,2,2]); c.fill();
+  circle(c, x+w/2+6, y+h-22, 2.5, "#ffd54a");
+  c.fillStyle = "#d77a4a"; rr(c, x+w/2-30, y+h-14, 10, 10, 2); c.fill(); circle(c, x+w/2-25, y+h-17, 7, F.leaf2);
+  c.fillStyle = "#d77a4a"; rr(c, x+w/2+20, y+h-14, 10, 10, 2); c.fill(); circle(c, x+w/2+25, y+h-17, 7, "#ff8fb5");
+}
+function fLibrary(c, hx, hy, tw){
+  const x = hx*K, y = hy*K, w = tw*K, h = 4*K;
+  c.fillStyle = F.shadow; c.beginPath(); c.ellipse(x+w/2, y+h-2, w/2+4, 10, 0, 0, 7); c.fill();
+  c.fillStyle = "#f6f1e6"; rr(c, x+8, y+40, w-16, h-42, 4); c.fill();
+  c.fillStyle = "#6a7fa8"; c.beginPath(); c.moveTo(x, y+44); c.lineTo(x+w/2, y+10); c.lineTo(x+w, y+44); c.closePath(); c.fill();
+  c.fillStyle = "rgba(255,255,255,.18)"; c.beginPath(); c.moveTo(x+w/2, y+10); c.lineTo(x+w/2, y+44); c.lineTo(x, y+44); c.closePath(); c.fill();
+  c.fillStyle = "#8597bf"; c.fillRect(x+2, y+40, w-4, 8);
+  circle(c, x+w/2, y+30, 7, "#fff"); circle(c, x+w/2, y+30, 4, "#6a7fa8");
+  for (let i=0;i<5;i++){ c.fillStyle = "#e2dccb"; rr(c, x+18+i*36, y+54, 12, h-64, 3); c.fill(); }
+  c.fillStyle = "#4b5b80"; rr(c, x+w/2-16, y+h-44, 32, 42, [16,16,2,2]); c.fill();
+  c.fillStyle = "#d9d2bf"; c.fillRect(x+4, y+h-10, w-8, 8);
+}
+/* 마을용 주인공 (매끈한 그림). x,y = 칸의 왼쪽 위(단위 K) */
+function fPlayer(c, x, y, dir, frame){
+  const cx = x+16, by = y+16 + (frame ? -1.5 : 0), leg = frame===1 ? 2 : frame===2 ? -2 : 0;
+  c.fillStyle = "rgba(0,0,0,.2)"; c.beginPath(); c.ellipse(cx, y+30, 10, 4, 0, 0, 7); c.fill();
+  c.fillStyle = "#2d3e74"; rr(c, cx-7, by+3+Math.max(0,leg), 6, 11-Math.max(0,leg), 3); c.fill(); rr(c, cx+1, by+3+Math.max(0,-leg), 6, 11-Math.max(0,-leg), 3); c.fill();
+  c.fillStyle = "#e8443a"; rr(c, cx-9, by-6, 18, 13, 6); c.fill();
+  circle(c, cx, by-14, 10, "#ffd7b0");
+  c.fillStyle = "#3b2a20"; c.beginPath();
+  if (dir===3) c.arc(cx, by-14, 10.5, 0, Math.PI*2); else c.arc(cx, by-17, 10, Math.PI, 0);
+  c.fill();
+  if (dir===3) return;
+  const ex = dir===1 ? -3 : dir===2 ? 3 : 0;
+  if (dir!==2) circle(c, cx-4+ex, by-12, 1.6, "#1d1d2b");
+  if (dir!==1) circle(c, cx+4+ex, by-12, 1.6, "#1d1d2b");
+  if (dir===0){ circle(c, cx-7, by-9, 2, "#ff9e9e"); circle(c, cx+7, by-9, 2, "#ff9e9e"); }
+}
+function paintVillage(c, m, data){
+  fGround(c, m); fPaths(c, m);
+  for (let y=0;y<m.H;y++) for (let x=0;x<m.W;x++){ const t = m.tiles[y*m.W+x]; if (t==="flower") fFlower(c,x,y); if (t==="fence") fFence(c,x,y); }
+  // 나무와 건물은 위에서 아래 순서로 (앞쪽이 뒤를 가리도록)
+  const items = [];
+  for (let y=0;y<m.H;y++) for (let x=0;x<m.W;x++) if (m.tiles[y*m.W+x]==="tree") items.push({y:y+1, fn:() => fTree(c,x,y)});
+  m.objs.forEach(o => items.push({y:o.y+o.h, fn:() => {
+    if (o.kind==="house"){ const stu = data.students[o.idx]; fHouse(c, o.x, o.y, ROOF2[o.idx%ROOF2.length], stu && data.done(stu.repo) > 0); }
+    if (o.kind==="library") fLibrary(c, o.x, o.y, o.w);
+    if (o.kind==="board") fBoard(c, o.x, o.y);
+  }}));
+  items.sort((a,b) => a.y-b.y).forEach(it => it.fn());
+}
+
 /* ================= MAPS ================= */
 function buildVillage(){
-  const W = 32, H = 20, tiles = [], solid = new Set(), objs = [];
+  /* 배치: 모든 건물 사이 간격 = 1칸, 가장자리 여백도 1칸으로 통일.
+     가운데 길(16~17번 칸)을 기준으로 좌우 대칭이에요. */
+  const W = 34, H = 20, tiles = [], solid = new Set(), objs = [];
   const set = (x,y,t) => { tiles[y*W+x] = t; };
   for (let y=0;y<H;y++) for (let x=0;x<W;x++) set(x,y, rand(x,y,7) < .08 ? "flower" : "grass");
   for (let x=0;x<W;x++){ set(x,0,"tree"); set(x,H-1,"tree"); }
   for (let y=0;y<H;y++){ set(0,y,"tree"); set(W-1,y,"tree"); }
   for (let x=1;x<W-1;x++){ set(x,6,"path"); set(x,17,"path"); }
-  for (let y=6;y<=18;y++){ set(15,y,"path"); set(16,y,"path"); }
-  set(15,19,"path"); set(16,19,"path");      // 마을 입구
-  const housePos = [[2,2],[8,2],[20,2],[26,2],[2,13],[8,13],[20,13],[26,13]];
-  // 아래 줄 집은 문이 아래(17번 줄 길)로 나 있어요
-  [[11,9],[12,12],[19,10],[21,9],[5,9],[27,10],[24,11],[6,11]].forEach(([x,y]) => set(x,y,"tree"));
-  for (let x=13;x<=19;x++) if (x<15||x>16) { set(x,14,"fence"); }
-  const board = {kind:"board", x:12, y:10, w:2, h:1};
+  for (let y=6;y<=18;y++){ set(16,y,"path"); set(17,y,"path"); }
+  set(16,19,"path"); set(17,19,"path");      // 마을 입구
+  const COLS = [2, 8, 21, 27];               // 집 왼쪽 x (2~6 · 8~12 | 자료실 14~19 | 21~25 · 27~31)
+  const housePos = [...COLS.map(x => [x,2]), ...COLS.map(x => [x,13])];
+  // 가운데 잔디밭 나무: 좌우 대칭
+  [[4,9],[10,10],[7,11],[23,9],[29,10],[26,11]].forEach(([x,y]) => set(x,y,"tree"));
+  for (let x=14;x<=19;x++) if (x<16||x>17) set(x,14,"fence");
+  const board = {kind:"board", x:13, y:10, w:2, h:1};
   objs.push(board);
-  const lib = {kind:"library", x:13, y:2, w:5, h:4, door:[15,5]};
+  const lib = {kind:"library", x:14, y:2, w:6, h:4, door:[16,5]};
   objs.push(lib);
   housePos.forEach(([hx,hy], i) => objs.push({kind:"house", idx:i, x:hx, y:hy, w:5, h:4, door:[hx+2, hy+3]}));
   for (let y=0;y<H;y++) for (let x=0;x<W;x++){ const t = tiles[y*W+x]; if (t==="tree"||t==="fence") solid.add(x+","+y); }
   objs.forEach(o => { for (let y=o.y;y<o.y+o.h;y++) for (let x=o.x;x<o.x+o.w;x++) solid.add(x+","+y); });
-  set(15,19,"path"); solid.delete("15,19"); solid.delete("16,19");
-  return { W, H, tiles, solid, objs, start:{x:15, y:11, dir:0} };
+  solid.delete("16,19"); solid.delete("17,19");
+  return { W, H, tiles, solid, objs, start:{x:16, y:11, dir:0} };
 }
 function buildRoom(){
   const W = 14, H = 11, tiles = [], solid = new Set(), objs = [];
@@ -176,10 +305,9 @@ function start(canvas, opts){
   stop();
   const map = opts.scene === "house" ? buildRoom() : buildVillage();
   const lw = map.W*T, lh = map.H*T;
-  const low = document.createElement("canvas"); low.width = lw; low.height = lh;
-  const bg = document.createElement("canvas"); bg.width = lw; bg.height = lh;
+  const bg = document.createElement("canvas"); bg.width = lw*S; bg.height = lh*S;
   canvas.width = lw*S; canvas.height = lh*S;
-  const g = G = { U: opts.scene === "house" ? 0.62 : 1, canvas, ctx:canvas.getContext("2d"), low, lc:low.getContext("2d"), bg, map, opts, keys:[], dialog:null, path:null, t0:performance.now(), raf:0,
+  const g = G = { U: opts.scene === "house" ? 0.62 : 1, canvas, ctx:canvas.getContext("2d"), bg, map, opts, keys:[], dialog:null, path:null, t0:performance.now(), raf:0,
     p:{ x:map.start.x, y:map.start.y, dir:map.start.dir, fx:map.start.x*T, fy:map.start.y*T, moving:null, frame:0 } };
   if (opts.scene === "village" && opts.from){                 // 집에서 나오면 그 집 문 앞에서 시작
     const h = map.objs.find(o => o.kind==="house" && o.idx===opts.from);
@@ -195,25 +323,26 @@ function start(canvas, opts){
 }
 
 function paintBg(g){
-  const c = g.bg.getContext("2d"), m = g.map, o = g.opts;
+  const m = g.map, o = g.opts, out = g.bg.getContext("2d");
+  if (o.scene === "village"){                       // 마을: 매끈한 일러스트
+    out.save(); out.scale(S*T/K, S*T/K); paintVillage(out, m, o.data); out.restore(); return;
+  }
+  const lowBg = document.createElement("canvas"); lowBg.width = m.W*T; lowBg.height = m.H*T;   // 집 안: 도트 그림
+  const c = lowBg.getContext("2d");
   for (let y=0;y<m.H;y++) for (let x=0;x<m.W;x++){
     const t = m.tiles[y*m.W+x];
-    if (t==="grass") drawGrass(c,x,y); else if (t==="flower") drawFlowers(c,x,y); else if (t==="path") drawPath(c,x,y);
-    else if (t==="tree") drawTree(c,x,y); else if (t==="fence") drawFence(c,x,y);
-    else if (t==="floor") drawFloor(c,x,y); else if (t==="iwall0") drawIWall(c,x,y,0); else if (t==="iwall1") drawIWall(c,x,y,1);
+    if (t==="floor") drawFloor(c,x,y); else if (t==="iwall0") drawIWall(c,x,y,0); else if (t==="iwall1") drawIWall(c,x,y,1);
     else if (t==="side") drawSide(c,x,y); else if (t==="exit") drawFloor(c,x,y);
   }
-  if (o.scene === "house"){ drawRug(c, 4, 3, 6, 4); drawMat(c, 6, m.H-1); }
+  drawRug(c, 4, 3, 6, 4); drawMat(c, 6, m.H-1);
   const st = o.data;
   m.objs.forEach(ob => {
-    if (ob.kind==="house"){ const stu = st.students[ob.idx]; drawHouse(c, ob.x, ob.y, ROOF[ob.idx%ROOF.length], stu && st.done(stu.repo) > 0); }
-    if (ob.kind==="library") drawLibrary(c, ob.x, ob.y);
-    if (ob.kind==="board") drawBoard(c, ob.x, ob.y);
     if (ob.kind==="frame"){ const w = st.week(ob.week); const s = st.state(o.repo, ob.week); drawFrame(c, ob.x, ob.y, s.cls ? (s.cls==="v2"?"v2":"v1") : (s.last ? "v1" : null), w && w.game, ROOF[o.idx%ROOF.length]); }
     if (ob.kind==="arcade") drawArcade(c, ob.x, ob.y, ROOF[o.idx%ROOF.length]);
     if (ob.kind==="desk") drawDesk(c, ob.x, ob.y);
     if (ob.kind==="plant") drawPlant(c, ob.x, ob.y);
   });
+  out.imageSmoothingEnabled = false; out.drawImage(lowBg, 0, 0, g.bg.width, g.bg.height);
 }
 
 const DIRS = { ArrowDown:0, KeyS:0, ArrowLeft:1, KeyA:1, ArrowRight:2, KeyD:2, ArrowUp:3, KeyW:3 };
@@ -339,29 +468,35 @@ function bfs(g, s, e){
 
 /* ---------- 그리기 ---------- */
 function draw(g, now){
-  const lc = g.lc, m = g.map;
-  lc.drawImage(g.bg, 0, 0);
-  // 굴뚝 연기 (제출한 집)
-  if (g.opts.scene==="village"){ g.map.objs.forEach(o => { if (o.kind!=="house") return; const stu = g.opts.data.students[o.idx]; if (!stu || !g.opts.data.done(stu.repo)) return;
-      for (let i=0;i<3;i++){ const k = ((now/1200) + i/3) % 1; lc.fillStyle = `rgba(255,255,255,${.7*(1-k)})`; lc.fillRect(o.x*T+5*T-19 + Math.sin(k*6+i)*2, o.y*T - k*14, 3+k*3, 3+k*3); } }); }
-  drawPlayer(lc, g.p.fx, g.p.fy, g.p.dir, g.p.moving ? g.p.frame : 0);
-  const c = g.ctx; c.imageSmoothingEnabled = false; c.drawImage(g.low, 0, 0, g.canvas.width, g.canvas.height);
+  const c = g.ctx, p = g.p, fr = p.moving ? p.frame : 0;
+  c.imageSmoothingEnabled = true; c.drawImage(g.bg, 0, 0);
+  if (g.opts.scene==="village"){
+    c.save(); c.scale(S*T/K, S*T/K);
+    // 굴뚝 연기 (제출한 집)
+    g.map.objs.forEach(o => { if (o.kind!=="house") return; const stu = g.opts.data.students[o.idx]; if (!stu || !g.opts.data.done(stu.repo)) return;
+      for (let i=0;i<3;i++){ const k = ((now/1400) + i/3) % 1; circle(c, o.x*K + 5*K-42 + Math.sin(k*6+i)*4, o.y*K + 14 - k*26, 3 + k*5, `rgba(255,255,255,${.75*(1-k)})`); } });
+    fPlayer(c, p.fx*K/T, p.fy*K/T, p.dir, fr);
+    c.restore();
+  } else {
+    c.save(); c.scale(S, S); drawPlayer(c, p.fx, p.fy, p.dir, fr); c.restore();
+  }
   labels(g, c);
   if (g.dialog) drawDialog(g, c);
 }
 function font(px, bold){ return `${bold?"700 ":""}${px}px Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; }
-function tag(c, text, cx, y, bg, fg){
-  const u = G ? G.U : 1; c.font = font(16*S/2*u, true); const w = c.measureText(text).width + 12*S/2*u, h = 22*S/2*u;
-  c.fillStyle = bg; roundRect(c, cx - w/2, y, w, h, 6); c.fill(); c.fillStyle = fg; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, cx, y + h/2 + 1); c.textAlign = "left";
+function tag(c, text, cx, y, bg, fg, pill){
+  const u = G ? G.U : 1; c.font = font(16*S/2*u, true); const w = c.measureText(text).width + (pill ? 18 : 12)*S/2*u, h = 22*S/2*u;
+  c.fillStyle = bg; roundRect(c, cx - w/2, y, w, h, pill ? h/2 : 6); c.fill();
+  if (pill){ c.lineWidth = 1.5; c.strokeStyle = "rgba(40,40,70,.18)"; c.stroke(); } c.fillStyle = fg; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, cx, y + h/2 + 1); c.textAlign = "left";
 }
 function labels(g, c){
   const d = g.opts.data;
   if (g.opts.scene==="village"){
     g.map.objs.forEach(o => {
       if (o.kind==="house"){ const stu = d.students[o.idx]; if (!stu) return; const n = d.done(stu.repo);
-        tag(c, `${d.label(stu)}${n ? "  ★"+n : ""}`, (o.x+2.5)*T*S, (o.y*T - 3)*S - 12, "rgba(20,18,40,.82)", n ? "#ffe27a" : "#fff"); }
-      if (o.kind==="library") tag(c, "📚 자료실", (o.x+2.5)*T*S, (o.y*T + 2)*S - 12, "rgba(20,18,40,.82)", "#9fe8ff");
-      if (o.kind==="board") tag(c, "📊 게시판", (o.x+1)*T*S, (o.y*T - 2)*S - 12, "rgba(20,18,40,.82)", "#fff");
+        tag(c, `${d.label(stu)}${n ? "  ★"+n : ""}`, (o.x+2.5)*T*S, (o.y*T - 4)*S - 12, "rgba(255,255,255,.95)", n ? "#c2410c" : "#2b2d4a", true); }
+      if (o.kind==="library") tag(c, "📚 자료실", (o.x+o.w/2)*T*S, (o.y*T - 1)*S - 12, "rgba(255,255,255,.95)", "#2b2d4a", true);
+      if (o.kind==="board") tag(c, "📊 게시판", (o.x+1)*T*S, (o.y*T - 10)*S - 12, "rgba(255,255,255,.95)", "#2b2d4a", true);
     });
   } else {
     g.map.objs.forEach(o => { if (o.kind==="frame") tag(c, `${o.week}주`, (o.x+.5)*T*S, (2*T - 1)*S - 8, "rgba(20,18,40,.75)", "#fff"); });
