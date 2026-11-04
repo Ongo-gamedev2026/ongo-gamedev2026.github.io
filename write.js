@@ -1224,25 +1224,25 @@ function gameBox(lite){
 function gameBoxFull(lite){
   const gem = `<a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>`;
   return `<section class="wr-ai" id="wrGame">
-    <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 프롬프트 → 목업 → ver1 → 수정 요청 → ver2 → Word 정리</span></div>
+    <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 목업 → 프롬프트 → ver1 → 수정 요청 → ver2 → Word 정리</span></div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>3주차 게임 기획서 불러오기</div>
       <div class="btns"><button class="btn primary" type="button" data-gload>📥 3주차 기획서 불러오기</button></div>
       <p class="wr-status" data-msg></p>
       <pre class="wr-ai-out" data-plan hidden></pre>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>게임 만들기 프롬프트 (자동 작성) <span>불러온 기획서가 자동으로 들어가요</span></div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>3주차 목업 이미지 불러오기</div>
+      <div class="wr-mock" data-mock><p class="hint" style="margin:0">1단계를 누르면 3주차 기획서 7️⃣ 칸에 올린 목업이 여기에 나와요.</p></div>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>게임 만들기 프롬프트 (자동 작성) <span>불러온 기획서가 자동으로 들어가요</span></div>
       <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-out>먼저 1단계에서 3주차 기획서를 불러와 주세요.</pre></details>
       <div class="btns"><button class="btn" type="button" data-copy disabled>📋 게임 만들기 프롬프트 복사</button></div>
       <p class="hint">복사하면 아래 개발일지 <b>1️⃣</b> 칸에도 자동으로 들어가요.</p>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>3주차 목업 이미지 불러오기</div>
-      <div class="wr-mock" data-mock><p class="hint" style="margin:0">1단계를 누르면 3주차 기획서 7️⃣ 칸에 올린 목업이 여기에 나와요.</p></div>
-    </div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>4</i>Gemini에 넣고 게임 만들기 요청</div>
       <ol class="wr-ai-steps">
         <li>${gem} 에서 <b>새 채팅</b>을 열고, 입력창의 <b>도구 → Canvas</b>를 켜요.</li>
-        <li><b>+ (파일 추가)</b>로 3단계에서 내려받은 <b>목업 이미지</b>를 첨부해요.</li>
-        <li>2단계에서 복사한 프롬프트를 붙여 넣고 보내요.</li>
+        <li><b>+ (파일 추가)</b>로 2단계에서 내려받은 <b>목업 이미지</b>를 첨부해요.</li>
+        <li>3단계에서 복사한 프롬프트를 붙여 넣고 보내요.</li>
       </ol>
     </div>
     ${lite ? `<div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>게임 확인 · ver1·ver2 올리기 · 수정 요청 · Word 정리는 작성하기 화면에서 <span>5~9단계</span></div>
@@ -1292,7 +1292,7 @@ function gameBoxFull(lite){
 function drawMock(box){
   const el = box.querySelector("[data-mock]");
   if(!G.mock){
-    el.innerHTML = `<p class="wr-status warn" style="margin:0">3주차 목업 이미지가 아직 없어요. 3주차 작성하기 화면 맨 아래 <b>🎨 스테이지 1 화면 그리고 목업 받기</b>에서 먼저 올리면 좋아요. 목업 없이 진행하면 2단계 프롬프트가 자동으로 "목업 없음"으로 바뀌어요.</p>
+    el.innerHTML = `<p class="wr-status warn" style="margin:0">3주차 목업 이미지가 아직 없어요. 3주차 작성하기 화면 맨 아래 <b>🎨 스테이지 1 화면 그리고 목업 받기</b>에서 먼저 올리면 좋아요. 목업 없이 진행하면 3단계 프롬프트가 자동으로 "목업 없음"으로 바뀌어요.</p>
       <div class="btns" style="margin-top:8px"><a class="btn" href="#/write/3/${esc(W.st.repo)}/0">3주차 작성하기로 가기</a></div>`;
     return;
   }
@@ -1321,7 +1321,7 @@ function mountGame(){
     try{
       await loadWeek3(); ready();
       const warn = G.from !== "3주차" ? `⚠️ 3주차 기획서가 비어 있어서 ${G.from} 기획서를 불러왔어요. ` : (G.plan.empty ? "⚠️ 기획서가 거의 비어 있어요. " : "");
-      msg.textContent = (warn || "✅ 불러왔어요. ") + (G.mock ? "목업 이미지도 찾았어요." : "목업 이미지는 아직 없어요 (3단계 참고).");
+      msg.textContent = (warn || "✅ 불러왔어요. ") + (G.mock ? "목업 이미지도 찾았어요." : "목업 이미지는 아직 없어요 (2단계 참고).");
       msg.className = "wr-status " + (warn || !G.mock ? "warn" : "ok");
     }catch(_){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
