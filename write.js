@@ -530,6 +530,7 @@ const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로 내 2�
 - 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 한 칸씩 써. 표로 만들지 마.
 - 레퍼런스, 등장하는 것, 입력은 하나마다 한 줄씩 쓰고, 칸은 | 로 나눠.
 - 아직 정하지 못한 칸은 "(비어 있음)"이라고 써.
+- 대화에서 내가 새로 정한 것 중 위 칸에 맞지 않는 것(점수·보상, 아이템, 화면 구성, 소리, 난이도, 나중에 할 것 등)은 버리지 말고 [7 추가]에 하나마다 한 줄씩 써.
 
 [1 한 문장 소개] 
 [2 타깃 플레이어] 
@@ -541,7 +542,9 @@ const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로 내 2�
 [5-1 실패 조건] 
 [5-2 등장] 이름 | 갖고 있는 정보 | 하는 행동 또는 규칙
 [5-3 입력 방식] 키보드, 마우스 중 사용하는 것
-[5-3 입력] 입력 | 게임 속 동작`;
+[5-3 입력] 입력 | 게임 속 동작
+[6 화면 시점] 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중 하나와 이유
+[7 추가] 항목 이름 | 내용`;
 
 /* docx → 줄 글 (외부 라이브러리 없이 zip을 풀어요) */
 async function docxText(buf){
@@ -575,14 +578,16 @@ async function docxText(buf){
 const normName = t => String(t || "").replace(/\*\*/g, "").replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
 const isBlank = v => !v || /^\(?\s*(비어\s*있음|없음|미정|-)\s*\)?$/.test(v.trim()) || /^ㅇ+$/.test(v.trim());
 function parseFill(text){
-  const F = { intro:"", target:"", core:"", s51:{}, refs:[], s52:[], keys:[], inputs:[] }; let hit = 0;
+  const F = { intro:"", target:"", core:"", s51:{}, refs:[], s52:[], keys:[], inputs:[], view:"", extras:[] }; let hit = 0;
   text.replace(/\r/g, "").split("\n").forEach(raw => {
     const l = raw.replace(/\*\*/g, "").replace(/^[\s>*•·\-–]+/, "").trim();
     const m = l.match(/^\[\s*([^\]]+?)\s*\]\s*[:：]?\s*(.*)$/); if(!m) return;
     const tag = m[1].replace(/\s/g, ""), val = m[2].replace(/\s*←.*$/, "").trim();
     const cells = () => { let c = val.split("|").map(x => x.trim()); if(c[0] === "") c.shift(); if(c[c.length-1] === "") c.pop(); return c; };
     hit++;
-    if(/입력방식/.test(tag)) F.keys = val.split(/[,，/]/).map(x => x.trim()).filter(Boolean);
+    if(/^7?추가|더추가/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.extras.push(c.length > 1 ? [c[0], c.slice(1).join(" | ")] : ["기타", c[0]]); }
+    else if(/화면시점|시점|카메라/.test(tag)) F.view = val;
+    else if(/입력방식/.test(tag)) F.keys = val.split(/[,，/]/).map(x => x.trim()).filter(Boolean);
     else if(/입력/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.inputs.push([c[0], c.slice(1).join(" | ")]); }
     else if(/등장/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.s52.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
     else if(/레퍼런스/.test(tag)){ const c = cells(); if(!isBlank(c[0])) F.refs.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
@@ -593,13 +598,47 @@ function parseFill(text){
     else if(/플레이중|진행/.test(tag)) F.s51.play = val;
     else if(/클리어|성공/.test(tag)) F.s51.clear = val;
     else if(/실패/.test(tag)) F.s51.fail = val;
+    else if(!isBlank(val) && !/^(내)?게임기획서$|^규칙$/.test(tag)){ hit--; F.extras.push([m[1].replace(/^\d+(-\d+)?\s*/, "").trim() || "기타", val]); }   // 모르는 칸도 버리지 않고 [7 추가]로
     else hit--;
   });
   return hit ? F : null;
 }
 
+/* 5-4 화면 시점 · 6 더 추가한 것 칸이 없는 기획서에는 맨 아래(마지막 --- 앞)에 새로 만들어요 */
+const EXTRA_MD = {
+  view:`### 5-4. 화면 시점
+
+> 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중 하나와 이유를 적습니다.
+
+**답:**
+`,
+  extra:`---
+
+## 6️⃣ 더 추가한 것
+
+> 위 칸에 맞지 않지만 보완하면서 새로 정한 것(점수·보상, 아이템, 화면 구성, 소리, 나중에 할 것 등)을 적습니다.
+
+| 항목 | 내용 |
+|---|---|
+|  |  |
+`};
+const secOf = (h, sec) => /5-4|화면 시점/.test(h) ? "view" : /6️⃣|더 추가/.test(h) ? "extra" : /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
+function ensureExtraSecs(F){
+  const has = re => W.segs.some(s => s.t === "raw" && s.lines.some(l => /^#{2,3}\s/.test(l) && re.test(l)));
+  const add = [];
+  if(!isBlank(F.view) && !has(/5-4|화면 시점/)) add.push(EXTRA_MD.view);
+  if(F.extras.length && !has(/6️⃣|더 추가/)) add.push(EXTRA_MD.extra);
+  if(!add.length) return;
+  let at = W.segs.length;    // 마지막 '---' 줄이 든 조각을 찾아 그 줄 앞에서 나눠 넣어요
+  for(let i = W.segs.length - 1; i >= 0; i--){ const s = W.segs[i]; if(s.t !== "raw") continue;
+    const k = s.lines.lastIndexOf("---"); if(k < 0) continue;
+    W.segs.splice(i, 1, ...[{ t:"raw", lines:s.lines.slice(0, k) }, { t:"raw", lines:s.lines.slice(k) }].filter(x => x.lines.length)); at = k > 0 ? i + 1 : i; break; }
+  W.segs.splice(at, 0, ...parseMd(add.join("\n")));
+}
 function mergeFill(F){
   const log = []; let sec = "";
+  F.view = F.view || ""; F.extras = F.extras || [];
+  ensureExtraSecs(F);
   const setCell = (c, v, where, quiet) => {
     if(isBlank(v) || c.ro) return false;
     const old = (c.val || "").trim(); if(old === v.trim()) return false;
@@ -622,7 +661,7 @@ function mergeFill(F){
   });
   for(const s of W.segs){
     if(s.t === "raw"){ const h = s.lines.filter(l => /^#{2,3}\s/.test(l)).pop();
-      if(h) sec = /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
+      if(h) sec = secOf(h, sec);
       continue; }
     if(s.t === "ans" && ["intro","target","core"].includes(sec)){
       const v = F[sec], old = (s.val || "").trim();
@@ -635,6 +674,11 @@ function mergeFill(F){
     if(s.t === "table" && sec === "refs") upsert(s, F.refs, "3. 레퍼런스", false);
     if(s.t === "table" && sec === "s52") upsert(s, F.s52, "5-2 등장", true);
     if(s.t === "table" && sec === "s53") upsert(s, F.inputs, "5-3 입력", false);
+    if(s.t === "ans" && sec === "view"){
+      const old = (s.val || "").trim();
+      if(!isBlank(F.view) && old !== F.view.trim()){ s.hl = isBlank(old) ? "new" : "chg"; s.val = F.view.trim(); log.push(`${s.hl === "new" ? "➕" : "✏️"} 5-4 화면 시점`); }
+    }
+    if(s.t === "table" && sec === "extra") upsert(s, F.extras, "6. 더 추가한 것", false);
     if(s.t === "chk" && sec === "s53"){
       const want = F.keys.some(k => (/키보드/.test(k) && /키보드/.test(s.text)) || (/마우스/.test(k) && /마우스/.test(s.text)));
       if(want && !s.on){ s.on = true; s.hl = "new"; log.push(`➕ 5-3 입력 방식: ${s.text.replace(/[^\p{L}\s]/gu, "").trim()}`); }
