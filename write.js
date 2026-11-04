@@ -329,8 +329,10 @@ async function load(){
   }catch(e){ box.innerHTML = `<div class="empty">문서를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</div>`; return; }
   if(text == null){ box.innerHTML = `<div class="empty">아직 문서가 없어요. 선생님께 알려 주세요.</div>`; return; }
   W.segs = parseMd(text);
+  const pre = W.doc.path === PLAN_PATH ? await prepPlan() : 0;
   renderSegs(box);
   setStatus(getKey(W.st.repo) ? "불러왔어요" : "열쇠를 넣으면 저장할 수 있어요", "");
+  if(pre){ W.dirty = false; markDirty(); setStatus(`2주차 기획서 내용을 미리 채웠어요 (${pre}곳). 고친 뒤 💾 저장하기를 눌러야 저장돼요`, "warn"); }
   applyPending();
 }
 
@@ -689,7 +691,28 @@ function mergeFill(F){
 
 let FILL_UNDO = null, BASE_FILL = null;
 const formEmpty = () => !W.segs.some(s => (s.t === "ans" && (s.val || "").trim() && !/^ㅇ+$/.test(s.val.trim())) || (s.t === "table" && s.rows.some(r => r.some(c => !c.ro && (c.val || "").trim()))));
-async function loadBase(){ if(BASE_FILL) return BASE_FILL; try{ const t = await fetchDoc(SRC_PATH); if(t) BASE_FILL = planToFill(summarizePlan(t).S); }catch(_){ } return BASE_FILL; }
+let BASE_REPO = null;   // BASE_FILL이 어느 학생 것인지 (다른 학생 페이지로 옮기면 다시 불러와요)
+async function loadBase(){ if(BASE_FILL && BASE_REPO === W.st.repo) return BASE_FILL; BASE_FILL = null; try{ const t = await fetchDoc(SRC_PATH); if(t){ BASE_FILL = planToFill(summarizePlan(t).S); BASE_REPO = W.st.repo; } }catch(_){ } return BASE_FILL; }
+/* 3주차 기획서를 열 때: 5-1 표의 '예시' 칸을 빼고, 비어 있으면 2주차 내용을 미리 채워요. 미리 채운 칸 수를 돌려줘요 */
+function dropExampleCol(){
+  let sec = "";
+  W.segs.forEach(s => {
+    if(s.t === "raw"){ const h = s.lines.filter(l => /^#{2,3}\s/.test(l)).pop(); if(h) sec = secOf(h, sec); return; }
+    if(s.t !== "table" || sec !== "s51") return;
+    const keep = s.head.map(h => !/예시/.test(h)); if(keep.every(Boolean)) return;
+    s.head = s.head.filter((_, i) => keep[i]);
+    s.rows = s.rows.map(r => r.filter((_, i) => keep[i]));
+    s.headLine = "| " + s.head.join(" | ") + " |"; s.sepLine = "|" + s.head.map(() => "---").join("|") + "|";
+  });
+}
+async function prepPlan(){
+  dropExampleCol();
+  if(!formEmpty()) return 0;
+  const base = await loadBase(); if(!base) return 0;
+  const n = mergeFill(JSON.parse(JSON.stringify(base))).length;
+  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  return n;
+}
 async function runFill(text, msg, list){
   const F = parseFill(text);
   if(!F){ msg.textContent = "정해진 형식([1 한 문장 소개] 같은 줄)을 찾지 못했어요. 정리 프롬프트로 다시 받아 주세요."; msg.className = "wr-status err"; return; }
@@ -702,7 +725,7 @@ async function runFill(text, msg, list){
   const clearHl = () => W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
   clearHl();
   FILL_UNDO = JSON.stringify(W.segs);
-  if(formEmpty() && BASE_FILL){ mergeFill(BASE_FILL); clearHl(); }   // 비어 있는 3주차 양식에는 2주차 내용을 먼저 깔아요
+  if(formEmpty() && BASE_FILL){ mergeFill(JSON.parse(JSON.stringify(BASE_FILL))); clearHl(); }   // 비어 있는 3주차 양식에는 2주차 내용을 먼저 깔아요
   const log = mergeFill(F);
   renderSegs(document.getElementById("wrDoc"));
   if(!log.length){ msg.textContent = "새로 바뀐 칸이 없어요. 이미 기획서와 같은 내용이에요."; msg.className = "wr-status"; list.innerHTML = ""; return; }
@@ -754,7 +777,7 @@ function mountReview(){
   box.querySelector("[data-load]").onclick = async () => {
     msg.textContent = "2주차 기획서를 불러오는 중…"; msg.className = "wr-status";
     try{
-      const sm = await latestPlan(); BASE_FILL = planToFill(sm.S);
+      const sm = await latestPlan(); BASE_FILL = planToFill(sm.S); BASE_REPO = W.st.repo;
       plan.textContent = sm.text; plan.hidden = false;
       prompt = REVIEW_PROMPT + "\n\n" + sm.text; out.textContent = prompt; cp.disabled = false;
       msg.textContent = sm.empty ? "⚠️ 2주차 기획서가 거의 비어 있어요. 그래도 Gemini에게 보내면 무엇부터 정할지 함께 정리할 수 있어요." : "✅ 불러왔어요. 2단계에서 프롬프트를 복사하세요.";
