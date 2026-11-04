@@ -954,6 +954,403 @@ function mountReview(){
   box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
 }
 
+/* ---------- 🎮 4주차 Gemini로 내 게임 만들기 ----------
+   ① 3주차 게임 기획서(docs/week3-plan.md, 없으면 2주차)를 불러와 정리
+   ② 기획서를 넣은 게임 만들기 프롬프트 자동 작성 (복사하면 개발일지 1️⃣에도 들어가요)
+   ③ 3주차 목업 이미지(기획서 7️⃣ 칸) 불러오기·내려받기
+   ④⑤⑥ Gemini에서 받은 게임 미리 해 보기 → ver1.html 내려받기 → play/index.html로 올리고 제출
+   ⑦ 추가·수정·버그 요청 문장 만들기 ⑧ ver2 같은 방법으로 올리기
+   ⑨ 대화에서 요청한 것을 Word로 받아 올리면 개발일지 3️⃣·4️⃣·💬·📌에 반영
+   GAME_WEEKS에 주차를 넣으면 그 주차 개발일지 작성 화면에 나와요. */
+const GAME_WEEKS = [4];
+const DEVLOG4 = "devlog/week04.md";
+const GAME_PATH = "play/index.html";
+const G = { plan:null, from:"", mock:null, sketch:null, repo:null, code:{}, undo:null };
+
+/* 3주차 기획서의 7️⃣ 칸에서 그림 위치를 찾아요 */
+function picPaths(md){
+  const out = {}; if(!md) return out;
+  const re = /!\[([^\]]*)\]\(([^)\s]+)\)/g; let m;
+  while((m = re.exec(md))){
+    const p = "docs/" + m[2].replace(/^\.\//, "");
+    if(/목업/.test(m[1])) out.mock = p; else if(/손그림/.test(m[1])) out.sketch = p;
+  }
+  return out;
+}
+async function loadWeek3(){
+  let t3 = null, t2 = null;
+  try{ t3 = await fetchDoc(PLAN_PATH); }catch(_){}
+  const ok3 = t3 && !summarizePlan(t3).empty;
+  if(!ok3){ try{ t2 = await fetchDoc(SRC_PATH); }catch(_){} }
+  const md = ok3 ? t3 : (t2 || t3);
+  if(!md) throw new Error("no plan");
+  const pics = picPaths(t3);
+  G.plan = summarizePlan(md); G.from = ok3 ? "3주차" : (t2 ? "2주차" : "3주차");
+  G.mock = pics.mock || null; G.sketch = pics.sketch || null; G.repo = W.st.repo;
+  return G;
+}
+
+const GAME_PROMPT = `너는 고등학생과 함께 HTML 웹게임을 만드는 게임 개발자야.
+맨 아래 [내 게임 기획서]는 내가 {{FROM}}에 정리한 게임 기획서야.
+{{MOCK}}
+이것을 바탕으로 "스테이지 1"을 실제로 플레이할 수 있는 웹게임으로 만들어 줘. Canvas에서 바로 실행해 볼 수 있게 만들어 줘.
+
+[만드는 규칙]
+- HTML 파일 하나에 HTML, CSS, JavaScript를 모두 넣어. 외부 이미지·소리 파일이나 라이브러리 없이 브라우저에서 바로 실행되게 해.
+- 기획서의 5-1(시작할 때·플레이 중·클리어 조건·실패 조건), 5-2(등장하는 것들), 5-3(입력)을 하나도 빠뜨리지 말고 넣어.
+- 화면 시점은 기획서의 화면 시점을 따라. 없으면 목업 이미지의 시점을 따라.
+- 캐릭터와 물건은 도형, 이모지, Canvas 그리기로 단순하게 표현해.
+- 기획서에 없는 기능(새 캐릭터, 스테이지 2, 상점, 업그레이드 등)은 넣지 마.
+- 기획서에 숫자가 없는 것(속도, 시간, 개수 등)은 처음 하는 사람도 할 만한 값으로 정하고, 코드 맨 위에 "설정값"으로 모아 둬.
+- 순서: 시작 화면(게임 제목, 조작법, 시작 버튼) → 게임 → 클리어 또는 게임오버 화면(결과, 다시 하기 버튼).
+- 화면을 클릭하지 않아도 키보드가 바로 동작하게 하고, 방향키나 스페이스를 눌러도 페이지가 스크롤되지 않게 해.
+- 코드 중요한 곳에 한국어 주석을 달아 줘.
+
+[게임을 만든 다음 글로 알려 줘]
+1. 기획서 반영 점검표: | 기획서 칸 | 게임에 넣은 방법 | ✅ 넣음 / 🔺 바꿈 / ❌ 못 넣음 |
+2. 네가 정한 숫자: 기획서에 없어서 네가 정한 값(속도, 시간, 개수 등)과 코드 속 설정값 이름
+3. 조작법
+4. 처음 플레이할 때 꼭 확인해 볼 것 3가지
+
+마지막에 "플레이해 보고 고치고 싶은 곳을 하나씩 말해 줘"라고 말해 줘.`;
+const MOCK_ON = `첨부한 이미지는 3주차에 만든 이 게임의 "스테이지 1" 화면 목업이야. 화면 배치, 색, 모양, 점수·버튼 위치는 이 목업을 최대한 따라 해.`;
+const MOCK_OFF = `(목업 이미지는 없어. 화면 배치는 기획서를 보고 보기 좋게 정해 줘.)`;
+function gamePrompt(){
+  const withMock = !!G.mock && G.useMock !== false;
+  return GAME_PROMPT.replace("{{FROM}}", G.from || "3주차").replace("{{MOCK}}", withMock ? MOCK_ON : MOCK_OFF)
+    + "\n\n" + (G.plan ? G.plan.text : "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)");
+}
+
+/* 수정 요청 문장 만들기 (7단계) */
+const REQ_KIND = {
+  add:{ label:"➕ 추가", name:"추가", now:"", want:"이렇게 넣어 줘", ex:{ what:"예: 아이템(하트)", want:"예: 10초마다 화면 위쪽 아무 곳에 하트가 생기고, 먹으면 목숨이 1 늘어나게" } },
+  fix:{ label:"✏️ 수정", name:"수정", now:"지금은", want:"이렇게 바꿔 줘", ex:{ what:"예: 플레이어 점프", now:"예: 점프가 너무 낮아서 장애물을 넘을 수 없어", want:"예: 점프 높이를 지금의 2배로" } },
+  bug:{ label:"🐞 버그", name:"버그", now:"지금은 이렇게 동작해", want:"원래는 이렇게 동작해야 해", ex:{ what:"예: 게임오버 후 다시 하기 버튼", now:"예: 다시 하기를 누르면 점수가 0으로 안 돌아가고 적이 2배로 나와", want:"예: 다시 하기를 누르면 처음 시작할 때와 똑같이 시작" } }
+};
+function reqPrompt(k, what, now, want){
+  const K = REQ_KIND[k], L = [];
+  L.push(`지금 게임에서 다른 부분은 그대로 두고, 아래 한 가지만 ${k === "add" ? "추가해" : "고쳐"} 줘.`);
+  L.push(`[종류] ${K.name}${k === "bug" ? " (원하는 대로 동작하지 않아요)" : ""}`);
+  L.push(`[어디] ${what.trim() || "(어디를)"}`);
+  if(K.now) L.push(`[${K.now}] ${now.trim() || "(지금 상태)"}`);
+  L.push(`[${K.want}] ${want.trim() || "(원하는 것)"}`);
+  L.push("", "- 고친 뒤 전체 코드를 HTML 파일 하나로 다시 보여 줘.", "- 무엇을 어떻게 바꿨는지 한 줄로 알려 줘.");
+  if(k === "bug") L.push("- 왜 그런 문제가 생겼는지도 쉬운 말로 한 줄 알려 줘.");
+  return L.join("\n");
+}
+
+/* 9단계: 요청 정리 Word */
+const LOG_PROMPT = `지금까지 우리가 나눈 대화를 처음부터 끝까지 살펴보고, 내가 게임에 추가하거나 수정해 달라고 요청한 내용을 정리해서 아래 형식 그대로 Word 문서 파일로 만들어 줘. (파일을 만들 수 없으면 글로 보여 줘.)
+
+[규칙]
+- 맨 처음 "게임을 만들어 줘" 요청은 빼고, 그다음부터 내가 보낸 요청을 보낸 순서대로 하나도 빠뜨리지 말고 [요청] 줄로 써.
+- 종류는 추가 / 수정 / 버그 중 하나로 써. (추가: 새 기능을 넣어 달라고 함, 수정: 있는 것을 바꿔 달라고 함, 버그: 원하는 대로 동작하지 않아서 고쳐 달라고 함)
+- 결과는 ✅ 잘 됨 / 🔺 조금 됨 / ❌ 안 됨 중 하나로 써. 내가 대화에서 결과를 말하지 않았으면 "❓ 확인 필요"라고 써.
+- 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 하나씩 써. 표로 만들지 마. 칸은 | 로 나눠.
+- 내가 하지 않은 요청이나 말하지 않은 결과는 지어내지 마.
+
+[게임 제목]
+[요청] 종류 | 내가 요청한 내용(한 문장) | 결과 | 남은 문제 (없으면 "없음")
+[ver2 바뀐 점] 처음 만든 게임(ver1)과 비교해서 바뀐 점을 한 줄로
+[가장 효과가 좋았던 요청] 원하는 대로 가장 잘 고쳐진 요청을 내가 보낸 문장 그대로
+[다음에 할 일] 아직 해결하지 못한 것 (하나마다 한 줄)`;
+
+function parseLog(text){
+  const R = { title:"", reqs:[], ver2:"", best:"", next:[] }; let hit = 0;
+  const kindRe = /^(➕|✏️|🐞)?\s*(추가|수정|버그)/;
+  text.replace(/\r/g, "").split("\n").forEach(raw => {
+    const l = raw.replace(/\*\*/g, "").replace(/^[\s>*•·\-–]+/, "").trim(); if(!l) return;
+    const m = l.match(/^\[\s*([^\]]+?)\s*\]\s*[:：]?\s*(.*)$/);
+    const cells = v => { let c = v.split("|").map(x => x.trim()); if(c[0] === "") c.shift(); if(c[c.length-1] === "") c.pop(); return c; };
+    if(!m){   // 표로 와도 읽어요: "버그 | ... | ✅ | ..." 줄
+      const c = cells(l); if(c.length >= 3 && kindRe.test(c[0])){ R.reqs.push([c[0], c[1] || "", c[2] || "", c.slice(3).join(" | ")]); hit++; }
+      return;
+    }
+    const tag = m[1].replace(/\s/g, ""), val = m[2].trim(); hit++;
+    if(/^요청$|수정요청|추가요청/.test(tag)){ const c = cells(val); if(!isBlank(c[0])) R.reqs.push([c[0], c[1] || "", c[2] || "", c.slice(3).join(" | ")]); }
+    else if(/제목/.test(tag)) R.title = val;
+    else if(/ver2|바뀐/.test(tag)) R.ver2 = val;
+    else if(/효과|좋았던요청/.test(tag)) R.best = val.replace(/^["“'「]|["”'」]$/g, "");
+    else if(/다음/.test(tag)){ if(!isBlank(val)) R.next.push(val); }
+    else hit--;
+  });
+  return hit ? R : null;
+}
+const kindName = t => { const m = String(t).match(/추가|수정|버그/); return m ? m[0] : t.trim(); };
+
+/* 개발일지에서 re 제목 아래(다음 제목 전까지) 조각을 찾아요 */
+function segUnder(re, pred){
+  let on = false;
+  for(const s of W.segs){
+    if(s.t === "raw"){ const hs = s.lines.filter(l => /^#{2,3}\s/.test(l)); if(hs.length) on = re.test(hs[hs.length - 1]); continue; }
+    if(on && pred(s)) return s;
+  }
+  return null;
+}
+const firstTable = () => W.segs.find(s => s.t === "table");
+const today = () => { const d = new Date(); return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`; };
+function setIfEmpty(c, v){ if(c && !c.ro && !(c.val || "").trim() && !isBlank(v)){ c.val = v; c.hl = "new"; return true; } return false; }
+const onDevlog = () => W.doc && W.doc.path === DEVLOG4 && W.segs.length;
+
+function putPromptInLog(text){
+  if(!onDevlog()) return false;
+  const c = segUnder(/1️⃣/, s => s.t === "code"); if(!c) return false;
+  c.val = text;
+  const chk = segUnder(/1️⃣/, s => s.t === "chk");
+  if(chk && G.mock && G.useMock !== false && !chk.on){ chk.on = true; chk.hl = "new"; }
+  const head = firstTable(); if(head && head.rows[0]) setIfEmpty(head.rows[0][0], today());
+  renderSegs(document.getElementById("wrDoc")); markDirty(); return true;
+}
+function putVersionInLog(ver, note){
+  if(!onDevlog()) return;
+  const t = segUnder(/버전 기록/, s => s.t === "table"); if(!t) return;
+  let r = t.rows.find(r => new RegExp("ver\\s*" + ver + "\\b", "i").test(r[0].text || r[0].val || ""));
+  if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); r[0].val = "ver" + ver; t.rows.push(r); }
+  [[1, today()], [2, note]].forEach(([i, v]) => { if(r[i] && !r[i].ro && !isBlank(v)){ r[i].hl = (r[i].val || "").trim() ? "chg" : "new"; r[i].val = v; } });
+  const head = firstTable(); if(head && head.rows[0]) setIfEmpty(head.rows[0][0], today());
+  renderSegs(document.getElementById("wrDoc")); markDirty();
+}
+function mergeLog(R){
+  const log = [];
+  const head = firstTable(); if(head && head.rows[0] && setIfEmpty(head.rows[0][1], R.title)) log.push("➕ 내 게임 제목");
+  const t = segUnder(/추가 · 수정|수정 요청 기록|추가·수정/, s => s.t === "table");
+  if(t){
+    const key = v => normName(v).slice(0, 24);
+    const freeRow = () => t.rows.find(r => r.every(c => c.ro || !(c.val || "").trim()));
+    R.reqs.forEach(q => {
+      if(t.rows.some(r => key(r[1].val || r[1].text || "") && key(r[1].val || r[1].text || "") === key(q[1]))) return;   // 이미 적은 요청
+      let r = freeRow(); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); }
+      [kindName(q[0]), q[1], q[2], q[3]].forEach((v, i) => { if(r[i] && !isBlank(v)){ r[i].val = v; r[i].hl = "new"; } });
+      log.push(`🆕 요청 기록: [${kindName(q[0])}] ${q[1].slice(0, 30)}${q[1].length > 30 ? "…" : ""}`);
+    });
+  }
+  if(!isBlank(R.ver2)){
+    const v = segUnder(/버전 기록/, s => s.t === "table");
+    const r = v && v.rows.find(r => /ver\s*2\b/i.test(r[0].text || r[0].val || ""));
+    if(r && r[2] && !r[2].ro && (r[2].val || "").trim() !== R.ver2){ r[2].hl = (r[2].val || "").trim() ? "chg" : "new"; r[2].val = R.ver2; log.push("✏️ 버전 기록 · ver2 바뀐 점"); }
+  }
+  if(!isBlank(R.best)){
+    const c = segUnder(/가장 효과가 좋았던/, s => s.t === "code");
+    if(c && !(c.val || "").trim()){ c.val = R.best; log.push("➕ 가장 효과가 좋았던 수정 요청"); }
+  }
+  if(R.next.length){
+    const li = segUnder(/다음 주/, s => s.t === "list");
+    if(li){ const have = li.val.split("\n").map(x => x.trim()).filter(Boolean); const add = R.next.filter(x => !have.includes(x));
+      if(add.length){ li.val = have.concat(add).join("\n"); log.push(`➕ 다음 주에 할 일 ${add.length}개`); } }
+  }
+  return log;
+}
+function runLog(text, msg, list){
+  const R = parseLog(text);
+  if(!R){ msg.textContent = "정해진 형식([요청] 같은 줄)을 찾지 못했어요. 9단계 프롬프트로 다시 받아 주세요."; msg.className = "wr-status err"; return; }
+  if(!onDevlog()){ msg.textContent = "개발일지를 아직 불러오지 못했어요. 잠시 뒤 다시 올려 주세요."; msg.className = "wr-status err"; return; }
+  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  G.undo = JSON.stringify(W.segs);
+  const log = mergeLog(R);
+  renderSegs(document.getElementById("wrDoc"));
+  if(!log.length){ msg.textContent = "새로 채울 칸이 없어요. 이미 개발일지에 들어 있는 내용이에요."; msg.className = "wr-status"; list.innerHTML = ""; return; }
+  markDirty();
+  msg.textContent = `✅ ${log.length}곳을 채웠어요. 초록 칸이 새로 들어간 곳이에요. 결과(✅/🔺/❌)를 직접 확인하고 💾 저장하기를 눌러요.`; msg.className = "wr-status ok";
+  list.innerHTML = `<ul>${log.map(x => `<li>${esc(x)}</li>`).join("")}</ul><button class="btn" type="button" data-undo>↩️ 채우기 전으로 되돌리기</button>`;
+  list.querySelector("[data-undo]").onclick = () => { W.segs = JSON.parse(G.undo); renderSegs(document.getElementById("wrDoc")); list.innerHTML = ""; msg.textContent = "되돌렸어요."; msg.className = "wr-status"; };
+}
+
+/* Gemini 답에서 HTML 코드만 꺼내요 (```html … ``` 로 와도 돼요) */
+function cleanCode(t){
+  let s = String(t || "").replace(/\r\n/g, "\n").trim();
+  const f = s.match(/```(?:html|HTML)?\s*\n([\s\S]*?)```/); if(f && /<(html|body|script|canvas|!doctype)/i.test(f[1])) s = f[1].trim();
+  const i = s.search(/<!doctype html|<html/i); if(i > 0) s = s.slice(i);
+  return s;
+}
+const looksGame = s => /<(html|body)[\s>]/i.test(s) && /<(script|canvas)/i.test(s);
+function dl(name, blob){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+
+async function uploadGame(ver, code, note, msg){
+  if(!getKey(W.st.repo)){ msg.textContent = "먼저 위에서 열쇠(코드)를 넣어 주세요."; msg.className = "wr-status err"; document.getElementById("wrKey").scrollIntoView({ behavior:"smooth" }); return; }
+  if(!looksGame(code)){ msg.textContent = "게임 코드가 아닌 것 같아요. <html>부터 </html>까지 전체 코드를 넣어 주세요."; msg.className = "wr-status err"; return; }
+  msg.textContent = `ver${ver} 게임을 올리는 중…`; msg.className = "wr-status";
+  try{
+    const g = await gh(`${repoPath()}/contents/${GAME_PATH}?ref=main`);
+    const body = { message:`${W.w.week}주차 게임 ver${ver} 올리기 (사이트에서)`, content:b64enc(code), branch:"main" };
+    if(g.ok) body.sha = (await g.json()).sha;
+    const r = await gh(`${repoPath()}/contents/${GAME_PATH}`, { method:"PUT", body:JSON.stringify(body), headers:{ "Content-Type":"application/json" } });
+    if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("저장 권한이 없어요. 열쇠를 확인해 주세요.");
+    if(!r.ok) throw new Error("게임을 올리지 못했어요. 잠시 뒤 다시 해 주세요.");
+    putVersionInLog(ver, note);
+    if(!(await save(true))){ msg.textContent = `ver${ver} 게임은 올렸어요. 개발일지 저장이 안 됐으니 아래 💾 저장하기를 누른 뒤 📮 제출하기로 제출해 주세요.`; msg.className = "wr-status warn"; return; }
+    const v = await nextVersion();
+    const notes = `## 🛠 패치노트 · 게임 ver${ver}\n- 바뀐 점: ${note || ""}\n- 고친 버그: \n- 다음 버전에서 할 일: `;
+    const rr = await gh(`${repoPath()}/releases`, { method:"POST", headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ tag_name:`week${W.w.week}-v${v}`, target_commitish:"main", name:`${W.w.week}주차 v${v} 제출 · 게임 ver${ver}`, body:notes }) });
+    if(!rr.ok) throw new Error(`게임은 올렸지만 제출(v${v})은 하지 못했어요. 아래 📮 제출하기를 눌러 주세요.`);
+    msg.innerHTML = `✅ ver${ver} 게임을 올리고 <b>${W.w.week}주차 v${v}</b>로 제출했어요. <a href="${hubUrl(W.st)}play/" target="_blank" rel="noopener">내 게임 열기 ↗</a> (반영까지 1~2분 걸릴 수 있어요)`;
+    msg.className = "wr-status ok";
+  }catch(e){ msg.textContent = e.message || "게임을 올리지 못했어요."; msg.className = "wr-status err"; }
+}
+
+/* 5·6단계, 8단계에 같은 모양으로 들어가는 게임 칸 */
+function slotHtml(ver){
+  return `<div class="wr-slot" data-slot="${ver}">
+      <div class="wr-ai-drop"><label class="btn"><input type="file" accept=".html,.htm,.txt" data-gfile hidden>📄 내려받은 html 파일 고르기</label><span class="hint" data-gname style="margin:0">또는 아래 칸에 코드를 붙여 넣어요</span></div>
+      <textarea class="wr-in mono wr-ai-paste" rows="4" data-gcode placeholder="Gemini Canvas의 코드(</>)를 전체 선택해 복사한 뒤 여기에 붙여 넣어요"></textarea>
+      <div class="btns"><button class="btn" type="button" data-gprev>▶ 미리 해 보기</button><button class="btn" type="button" data-gdl>💾 ver${ver}.html 내려받기</button></div>
+      <div class="wr-game-prev" data-gbox hidden><iframe sandbox="allow-scripts allow-pointer-lock" title="ver${ver} 미리 보기" data-gframe></iframe></div>
+      <label class="wr-label" style="display:block;margin-top:10px">🛠 ver${ver}에서 바뀐 점 (버전 기록·패치노트에 들어가요)</label>
+      <textarea class="wr-in" rows="1" data-gnote>${ver === 1 ? "3주차 기획서와 목업으로 Gemini가 처음 만든 스테이지 1 게임" : ""}</textarea>
+      <div class="btns" style="margin-top:8px"><button class="btn primary" type="button" data-gup>⬆️ ver${ver}로 올리고 제출하기</button></div>
+      <p class="wr-status" data-gmsg></p>
+    </div>`;
+}
+function mountSlot(box, ver){
+  const el = box.querySelector(`[data-slot="${ver}"]`); if(!el) return;
+  const code = el.querySelector("[data-gcode]"), msg = el.querySelector("[data-gmsg]"), frame = el.querySelector("[data-gframe]"), pbox = el.querySelector("[data-gbox]");
+  if(G.code[ver]) code.value = G.code[ver];
+  code.addEventListener("input", () => { G.code[ver] = code.value; });
+  el.querySelector("[data-gfile]").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if(!f) return;
+    code.value = await f.text(); G.code[ver] = code.value; el.querySelector("[data-gname]").textContent = "📄 " + f.name; };
+  const get = () => { const s = cleanCode(code.value); if(!looksGame(s)){ msg.textContent = "게임 코드가 아닌 것 같아요. <html>부터 </html>까지 전체 코드를 넣어 주세요."; msg.className = "wr-status err"; return null; } msg.textContent = ""; return s; };
+  el.querySelector("[data-gprev]").onclick = () => { const s = get(); if(!s) return; pbox.hidden = false; frame.srcdoc = s; setTimeout(() => frame.focus(), 300); };
+  el.querySelector("[data-gdl]").onclick = () => { const s = get(); if(!s) return; dl(`ver${ver}.html`, new Blob([s], { type:"text/html;charset=utf-8" })); msg.textContent = `💾 ver${ver}.html을 내려받았어요. 컴퓨터에 잘 보관해 두세요.`; msg.className = "wr-status ok"; };
+  el.querySelector("[data-gup]").onclick = async ev => { const s = get(); if(!s) return; const b = ev.currentTarget; b.disabled = true;
+    await uploadGame(ver, s, el.querySelector("[data-gnote]").value.trim(), msg); b.disabled = false; };
+}
+
+function gameBox(){
+  const gem = `<a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>`;
+  return `<section class="wr-ai" id="wrGame">
+    <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 프롬프트 → 목업 → ver1 → 수정 요청 → ver2 → Word 정리</span></div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>3주차 게임 기획서 불러오기</div>
+      <div class="btns"><button class="btn primary" type="button" data-gload>📥 3주차 기획서와 목업 불러오기</button></div>
+      <p class="wr-status" data-msg></p>
+      <pre class="wr-ai-out" data-plan hidden></pre>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>게임 만들기 프롬프트 (자동 작성) <span>불러온 기획서가 자동으로 들어가요</span></div>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-out>먼저 1단계에서 3주차 기획서를 불러와 주세요.</pre></details>
+      <div class="btns"><button class="btn" type="button" data-copy disabled>📋 게임 만들기 프롬프트 복사</button></div>
+      <p class="hint">복사하면 아래 개발일지 <b>1️⃣</b> 칸에도 자동으로 들어가요.</p>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>3주차 목업 이미지 불러오기</div>
+      <div class="wr-mock" data-mock><p class="hint" style="margin:0">1단계를 누르면 3주차 기획서 7️⃣ 칸에 올린 목업이 여기에 나와요.</p></div>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>4</i>Gemini에 넣고 게임 만들기 요청</div>
+      <ol class="wr-ai-steps">
+        <li>${gem} 에서 <b>새 채팅</b>을 열고, 입력창의 <b>도구 → Canvas</b>를 켜요.</li>
+        <li><b>+ (파일 추가)</b>로 3단계에서 내려받은 <b>목업 이미지</b>를 첨부해요.</li>
+        <li>2단계에서 복사한 프롬프트를 붙여 넣고 보내요.</li>
+      </ol>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>만들어진 게임 확인하고 내려받기 <span>Canvas 미리 보기에서 먼저 해 봐요</span></div>
+      <p class="hint">Canvas 오른쪽 위 <b>코드(&lt;/&gt;)</b>를 눌러 전체 코드를 복사해 아래 칸에 붙여 넣거나, 내려받은 html 파일을 골라요. <b>▶ 미리 해 보기</b>로 확인하고 <b>💾 ver1.html 내려받기</b>로 내 컴퓨터에도 저장해요.</p>
+      ${slotHtml(1)}
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>6</i>ver1로 업데이트 <span>5단계의 ⬆️ 버튼을 누르면 돼요</span></div>
+      <p class="hint">내 게임(<code>play/index.html</code>)이 ver1로 바뀌고 4주차 제출 기록과 개발일지 <b>4️⃣ 버전 기록</b>에 자동으로 남아요. 올린 다음 아래 개발일지 <b>2️⃣ ver1 플레이해 보기</b> 표를 채워요.</p>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>7</i>부족한 부분 · 안 되는 부분 요청하기 <span>같은 Gemini 채팅에서 한 번에 하나씩</span></div>
+      <p class="hint">2️⃣ 표에서 🔺·❌인 것부터 요청해요. 종류를 고르고 빈칸을 채우면 요청 문장이 만들어져요. 결과를 확인하고 다음 요청으로 넘어가요.</p>
+      <div class="wr-req">
+        <div class="btns" data-kinds>${Object.entries(REQ_KIND).map(([k, K], i) => `<button class="btn${i ? "" : " primary"}" type="button" data-kind="${k}">${K.label}</button>`).join("")}</div>
+        <label class="wr-label">어디를?</label><textarea class="wr-in" rows="1" data-rwhat></textarea>
+        <div data-rnow-wrap><label class="wr-label" data-rnow-l></label><textarea class="wr-in" rows="1" data-rnow></textarea></div>
+        <label class="wr-label" data-rwant-l></label><textarea class="wr-in" rows="1" data-rwant></textarea>
+        <pre class="wr-ai-out" data-rout></pre>
+        <div class="btns"><button class="btn" type="button" data-rcopy>📋 요청 문장 복사</button><button class="btn" type="button" data-rclear>🧹 새 요청</button></div>
+      </div>
+      <details class="wr-ai-peek"><summary>💡 잘 고쳐지는 요청 쓰는 법</summary><ul class="wr-ai-steps">
+        <li><b>한 번에 하나씩</b> 요청해요. 여러 개를 한꺼번에 말하면 다른 곳이 망가지기 쉬워요.</li>
+        <li>"좀 더", "이상해" 대신 <b>숫자와 위치</b>로 말해요. (예: 속도를 절반으로, 화면 오른쪽 위에)</li>
+        <li>버그는 <b>무엇을 했을 때 → 어떻게 됐는지 → 원래 어떻게 돼야 하는지</b>를 적어요.</li>
+        <li>고쳐진 게임은 Canvas 미리 보기에서 <b>바로 다시 해 보고</b> 결과(✅/🔺/❌)를 Gemini에게도 알려 주면 9단계 정리가 정확해져요.</li>
+      </ul></details>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>8</i>ver2 내려받고 올리기 <span>요청을 다 마친 뒤 마지막 코드로</span></div>
+      ${slotHtml(2)}
+    </div>
+    <div class="wr-ai-step" data-log-area><div class="wr-ai-h"><i>9</i>요청한 내용을 Word 파일로 정리하기 <span>같은 채팅에 보내요</span></div>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(LOG_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-logp>📋 Word 정리 요청 프롬프트 복사</button></div>
+      <p class="hint">Gemini가 Word 파일을 바로 주지 않으면 <b>Google Docs로 내보내기 → 파일 → 다운로드 → Microsoft Word(.docx)</b>로 받아요. 받은 파일을 올리면 개발일지 <b>3️⃣ 요청 기록 · 4️⃣ ver2 바뀐 점 · 💬 · 📌</b>에 채워져요.</p>
+      <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-lfile hidden>📄 Word 파일 올리기 (.docx)</label><span data-lname class="hint" style="margin:0"></span></div>
+      <details class="wr-ai-peek"><summary>파일이 안 되면: Gemini 답을 붙여 넣기</summary>
+        <textarea class="wr-in wr-ai-paste" rows="4" data-lpaste placeholder="[게임 제목] ... [요청] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
+        <div class="btns"><button class="btn" type="button" data-lfill>✍️ 개발일지에 반영하기</button></div></details>
+      <p class="wr-status" data-lmsg></p>
+      <div class="wr-ai-log" data-llist></div>
+      <p class="hint">마지막으로 <b>💬 좋았던 이유 · 🤔 비교 소감</b>은 내 말로 쓰고 💾 저장 → 📮 제출해요.</p>
+    </div>
+  </section>`;
+}
+function drawMock(box){
+  const el = box.querySelector("[data-mock]");
+  if(!G.mock){
+    el.innerHTML = `<p class="wr-status warn" style="margin:0">3주차 목업 이미지가 아직 없어요. 3주차 작성하기 화면 맨 아래 <b>🎨 스테이지 1 화면 그리고 목업 받기</b>에서 먼저 올리면 좋아요. 목업 없이 진행하면 2단계 프롬프트가 자동으로 "목업 없음"으로 바뀌어요.</p>
+      <div class="btns" style="margin-top:8px"><a class="btn" href="#/write/3/${esc(W.st.repo)}/0">3주차 작성하기로 가기</a></div>`;
+    return;
+  }
+  const src = p => (LOCAL_IMG[p] || rawUrl(W.st, "main", p)) + "?t=" + Date.now();
+  el.innerHTML = `<div class="wr-mock-pics">
+      <figure><img src="${src(G.mock)}" alt="Gemini 목업"><figcaption>🖼️ 3주차 Gemini 목업</figcaption></figure>
+      ${G.sketch ? `<figure><img src="${src(G.sketch)}" alt="내 손그림"><figcaption>✏️ 내 손그림 (참고)</figcaption></figure>` : ""}
+    </div>
+    <div class="btns"><button class="btn primary" type="button" data-mdl>⬇️ 목업 이미지 내려받기</button></div>
+    <p class="wr-status" data-mmsg></p>`;
+  el.querySelector("[data-mdl]").onclick = async () => {
+    const m = el.querySelector("[data-mmsg]");
+    try{ const r = await fetch(rawUrl(W.st, "main", G.mock) + "?t=" + Date.now()); if(!r.ok) throw 0;
+      dl("week3-mockup." + (G.mock.split(".").pop() || "png"), await r.blob());
+      m.textContent = "⬇️ 내려받았어요. 4단계에서 Gemini에 첨부해요."; m.className = "wr-status ok"; }
+    catch(_){ m.textContent = "내려받지 못했어요. 이미지를 마우스 오른쪽 버튼으로 눌러 '이미지를 다른 이름으로 저장'을 해 주세요."; m.className = "wr-status err"; }
+  };
+}
+function mountGame(){
+  const box = document.getElementById("wrGame"); if(!box) return;
+  if(G.repo !== W.st.repo){ G.plan = null; G.mock = G.sketch = null; G.code = {}; G.repo = null; }
+  const msg = box.querySelector("[data-msg]"), plan = box.querySelector("[data-plan]"), out = box.querySelector("[data-out]"), cp = box.querySelector("[data-copy]");
+  const ready = () => { plan.textContent = G.plan.text; plan.hidden = false; out.textContent = gamePrompt(); cp.disabled = false; drawMock(box); };
+  box.querySelector("[data-gload]").onclick = async () => {
+    msg.textContent = "3주차 기획서를 불러오는 중…"; msg.className = "wr-status";
+    try{
+      await loadWeek3(); ready();
+      const warn = G.from !== "3주차" ? `⚠️ 3주차 기획서가 비어 있어서 ${G.from} 기획서를 불러왔어요. ` : (G.plan.empty ? "⚠️ 기획서가 거의 비어 있어요. " : "");
+      msg.textContent = (warn || "✅ 불러왔어요. ") + (G.mock ? "목업 이미지도 찾았어요." : "목업 이미지는 아직 없어요 (3단계 참고).");
+      msg.className = "wr-status " + (warn || !G.mock ? "warn" : "ok");
+    }catch(_){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
+  };
+  if(G.plan) ready();
+  cp.onclick = () => { const t = gamePrompt(); copyText(t, cp); if(putPromptInLog(t)) setStatus("프롬프트를 개발일지 1️⃣에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); };
+  mountSlot(box, 1); mountSlot(box, 2);
+
+  /* 7단계 요청 문장 만들기 */
+  let kind = "add";
+  const what = box.querySelector("[data-rwhat]"), now = box.querySelector("[data-rnow]"), want = box.querySelector("[data-rwant]"), rout = box.querySelector("[data-rout]");
+  const redraw = () => {
+    const K = REQ_KIND[kind];
+    box.querySelectorAll("[data-kind]").forEach(b => b.classList.toggle("primary", b.dataset.kind === kind));
+    box.querySelector("[data-rnow-wrap]").hidden = !K.now;
+    box.querySelector("[data-rnow-l]").textContent = K.now ? K.now + "?" : "";
+    box.querySelector("[data-rwant-l]").textContent = K.want + "!";
+    what.placeholder = K.ex.what; now.placeholder = K.ex.now || ""; want.placeholder = K.ex.want;
+    rout.textContent = reqPrompt(kind, what.value, now.value, want.value);
+  };
+  box.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { kind = b.dataset.kind; redraw(); });
+  [what, now, want].forEach(t => t.addEventListener("input", () => { grow(t); redraw(); }));
+  box.querySelector("[data-rcopy]").onclick = e => { if(!what.value.trim() || !want.value.trim()){ rout.textContent = "✋ '어디를?'과 마지막 칸을 먼저 채워 주세요.\n\n" + reqPrompt(kind, what.value, now.value, want.value); return; } copyText(rout.textContent, e.currentTarget); };
+  box.querySelector("[data-rclear]").onclick = () => { [what, now, want].forEach(t => { t.value = ""; grow(t); }); redraw(); what.focus(); };
+  redraw();
+
+  /* 9단계 Word 정리 */
+  box.querySelector("[data-logp]").onclick = e => copyText(LOG_PROMPT, e.currentTarget);
+  const lmsg = box.querySelector("[data-lmsg]"), llist = box.querySelector("[data-llist]"), lpaste = box.querySelector("[data-lpaste]");
+  box.querySelector("[data-lfile]").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return; e.target.value = "";
+    box.querySelector("[data-lname]").textContent = "📄 " + f.name;
+    try{ lpaste.value = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : await f.text(); }
+    catch(_){ lmsg.textContent = "파일을 읽지 못했어요. Word(.docx) 파일인지 확인하거나, 아래 '붙여 넣기'를 이용해 주세요."; lmsg.className = "wr-status err"; return; }
+    runLog(lpaste.value, lmsg, llist);
+  };
+  box.querySelector("[data-lfill]").onclick = () => runLog(lpaste.value, lmsg, llist);
+}
+
 /* ---------- 페이지 ---------- */
 function view(n, repo, docIdx){
   const w = findWeek(n), st = findStu(repo);
@@ -964,6 +1361,7 @@ function view(n, repo, docIdx){
     ${w.docs.length > 1 ? `<div class="doc-bar">${w.docs.map((x, i) => `<a class="tab ${i === di ? "on" : ""}" href="#/write/${w.week}/${esc(st.repo)}/${i}">${esc(x.name)}</a>`).join("")}</div>` : ""}
     <div id="wrKey"></div>
     ${REVIEW_WEEKS.includes(w.week) ? reviewBox() : ""}
+    ${GAME_WEEKS.includes(w.week) && d.path === DEVLOG4 ? gameBox() : ""}
     <div class="paper wr"><div id="wrDoc"></div></div>
     ${REVIEW_WEEKS.includes(w.week) && d.path === PLAN_PATH ? picBox() : ""}
     <div class="wr-bar">
@@ -976,7 +1374,7 @@ function view(n, repo, docIdx){
 function mount(n, repo, docIdx){
   const w = findWeek(n), st = findStu(repo); if(!w || !st) return;
   W.w = w; W.st = st; W.doc = w.docs[Math.min(+docIdx || 0, w.docs.length - 1)];
-  drawKey(); load(); mountReview(); mountPic();
+  drawKey(); load(); mountReview(); mountPic(); mountGame();
   document.getElementById("wrSave").onclick = () => save();
   document.getElementById("wrSubmit").onclick = openSubmit;
 }
