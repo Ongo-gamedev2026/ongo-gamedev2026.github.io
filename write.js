@@ -185,6 +185,9 @@ function renderSegs(box){
       const d = document.createElement("div"); d.className = "md wr-raw"; d.innerHTML = mdHtml(s.lines.join("\n"));
       d.querySelectorAll("p").forEach(p => { if(/^예\s*[:：)]/.test(p.textContent.trim())) p.classList.add("ex"); });
       d.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; });
+      d.querySelectorAll("img").forEach(im => { const src = im.getAttribute("src") || ""; if(/^(https?:|data:|blob:|\/)/.test(src)) return;
+        const p = docDir() + src.replace(/^\.\//, ""); im.src = LOCAL_IMG[p] || rawUrl(W.st, "main", p) + "?t=" + Date.now();
+        const k = Object.keys(IMG).find(x => IMG[x].alt === im.alt); if(k) im.dataset.pic = k; im.classList.add("wr-pic"); });
       d.querySelectorAll("blockquote").forEach(b => { if(/작성 방법|Commit changes/.test(b.textContent)) b.remove(); });
       if(d.textContent.trim() || d.querySelector("img,hr,table")) box.appendChild(d);
       return;
@@ -444,19 +447,20 @@ const REVIEW_WEEKS = [3];
 const PLAN_PATH = "docs/week3-plan.md";       // 채우기 대상 (3주차 보완 기획서)
 const SRC_PATH = "docs/week2-plan.md";        // 불러올 2주차 기획서
 function summarizePlan(md){
- const L=md.replace(/\r\n/g,'\n').split('\n');const S={intro:'',target:'',core:'',refs:[],s51:[],s52:[],s53rows:[],s53in:[]};let sec='',tbl=0;
+ const L=md.replace(/\r\n/g,'\n').split('\n');const S={intro:'',target:'',core:'',refs:[],s51:[],s52:[],s53rows:[],s53in:[],view:'',extras:[]};let sec='',tbl=0;
  const cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/\|\s*$/,'');const o=[];let c='';for(let i=0;i<s.length;i++){if(s[i]==='\\'&&s[i+1]==='|'){c+='|';i++;continue}if(s[i]==='|'){o.push(c);c='';continue}c+=s[i]}o.push(c);return o.map(x=>x.replace(/<br\s*\/?>/gi,' / ').trim())};
  const clean=t=>t.replace(/\*\*/g,'').replace(/[^\p{L}\p{N}\s()·,./-]/gu,'').replace(/\s+/g,' ').trim();
  for(const l of L){
-  if(/^#{2,3}\s/.test(l)){tbl=0;sec=/한 문장/.test(l)?'intro':/타깃|타겟/.test(l)?'target':/레퍼런스/.test(l)?'refs':/핵심/.test(l)?'core':/5-1/.test(l)?'s51':/5-2/.test(l)?'s52':/5-3/.test(l)?'s53':(/5️⃣|스테이지 1 만들어/.test(l)?'':sec);continue}
+  if(/^#{2,3}\s/.test(l)){tbl=0;sec=/5-5|화면 그림/.test(l)?'':/5-4|화면 시점/.test(l)?'view':/6️⃣|더 추가/.test(l)?'extra':/한 문장/.test(l)?'intro':/타깃|타겟/.test(l)?'target':/레퍼런스/.test(l)?'refs':/핵심/.test(l)?'core':/5-1/.test(l)?'s51':/5-2/.test(l)?'s52':/5-3/.test(l)?'s53':(/5️⃣|스테이지 1 만들어/.test(l)?'':sec);continue}
   let m;
-  if((m=l.match(/^\*\*답:\*\*[ \t]*(.*)$/))&&['intro','target','core'].includes(sec)){S[sec]=m[1].trim();continue}
+  if((m=l.match(/^\*\*답:\*\*[ \t]*(.*)$/))&&['intro','target','core','view'].includes(sec)){S[sec]=m[1].trim();continue}
   if((m=l.match(/^\s*-\s*\[(x|X)\]\s*(.*)$/))&&sec==='s53'){S.s53in.push(clean(m[2]));continue}
   if(/^\|/.test(l)){tbl++;if(tbl<=2)continue;const c=cells(l);
    if(sec==='refs'&&c.some(Boolean))S.refs.push(c);
    if(sec==='s51')S.s51.push([clean(c[0]),c[1]||'']);
    if(sec==='s52'&&(c[1]||c[2]||/플레이어/.test(c[0])||clean(c[0])))S.s52.push([clean(c[0])||'(이름 없음)',c[1]||'',c[2]||'']);
    if(sec==='s53'&&!/^예\s*[:：]/.test(c[0])&&(c[0]||c[1]))S.s53rows.push(c);
+   if(sec==='extra'&&(c[0]||c[1]))S.extras.push(c);
   }else if(l.trim()==='')tbl=tbl;else if(!/^\|/.test(l))tbl=0;
  }
  const v=x=>x&&!/^ㅇ+$/.test(x.trim())?x.trim():'(비어 있음)';
@@ -468,6 +472,8 @@ function summarizePlan(md){
  out.push(...(S.s52.length?S.s52.map(r=>`   - ${r[0]} → 갖고 있는 정보: ${v(r[1])} / 하는 행동·규칙: ${v(r[2])}`):['   - (비어 있음)']));
  out.push(`5-3. 입력 방식: ${S.s53in.length?S.s53in.join(', '):'(비어 있음)'}`);
  out.push(...(S.s53rows.length?S.s53rows.map(r=>`   - ${v(r[0])} → ${v(r[1])}`):['   - (비어 있음)']));
+ if(S.view)out.push(`5-4. 화면 시점: ${S.view}`);
+ if(S.extras.length)out.push('6. 더 추가한 것:',...S.extras.map(r=>`   - ${v(r[0])}: ${v(r[1])}`));
  const filled=[S.intro,S.target,S.core].filter(x=>x&&!/^ㅇ+$/.test(x.trim())).length+S.refs.length+S.s52.filter(r=>r[1]||r[2]).length;
  return {text:out.join('\n'),empty:filled<2,S};
 }
@@ -548,6 +554,74 @@ const FILL_PROMPT = `지금까지 우리가 나눈 대화를 바탕으로 내 2�
 [6 화면 시점] 탑다운 / 사이드뷰 / 세로 스크롤 / 고정 한 화면 / 쿼터뷰 / 3D 중 하나와 이유
 [7 추가] 항목 이름 | 내용`;
 
+/* ---------- 🎨 스테이지 1 화면 그림 → Gemini 목업 ---------- */
+const MOCKUP_PROMPT = `너는 HTML 웹게임 화면을 디자인하는 게임 UI 디자이너야.
+첨부한 사진은 내가 그림판(또는 종이)에 직접 그린 내 게임의 "스테이지 1" 화면이야.
+이 그림과 맨 아래 [내 게임 기획서]를 바탕으로, 실제 게임 화면처럼 보이는 목업 이미지 1장을 만들어 줘.
+게임 코드는 만들지 말고, 이미지로 만들어 줘.
+
+[꼭 지킬 것]
+- 내 그림의 배치를 그대로 지켜. 무엇이 어디에 있는지, 대략적인 크기 비율을 바꾸지 마.
+- 내 그림과 기획서에 없는 캐릭터, 버튼, 장식은 새로 더하지 마.
+- 그림에서 알아보기 어려운 부분은 기획서(5-2 등장하는 것들, 5-3 입력)를 보고 정리해.
+- 화면 시점은 기획서의 5-4 화면 시점을 따라. 없으면 내 그림의 시점을 따라.
+
+[HTML 웹게임으로 만들 수 있는 그래픽 기준]
+- 스크롤 없는 한 화면. 가로 16:9(예: 960×540), 세로로 하는 게임이면 9:16.
+- 평평한 2D 그래픽: 단색이나 간단한 그라데이션의 사각형, 둥근 사각형, 원, 굵은 테두리, 단순한 아이콘이나 이모지로 표현해.
+- 캐릭터와 물건도 도형 몇 개를 겹친 정도로 단순하게 그려. (나중에 HTML·CSS·Canvas로 직접 그릴 수 있는 수준)
+- 사진 같은 질감, 3D 렌더링, 빛 번짐, 복잡한 일러스트, 그림 배경은 쓰지 마. 배경은 단색이나 간단한 도형 2~3개로.
+- 점수, 시간, 목숨 같은 정보와 버튼 글자는 한국어로 또렷하게 쓰고, 버튼은 누를 수 있는 모양으로 그려.
+- 전체 색은 5~6가지 이내로 맞춰.
+
+[이미지를 만든 다음 글로 정리해 줘]
+1. 화면 구성 요소 표: | 구성 요소 | 화면 위치 | 모양·색 | 기획서의 어느 칸과 연결되는지 |
+2. 사용한 색 목록 (이름과 색 코드, 예: 배경 #FFF4E6)
+3. 내 그림에서 바꾸거나 정리한 점 (없으면 "없음")
+4. 기획서에는 있는데 화면에 안 보이는 것 (없으면 "없음")
+
+마지막에 "더 고치고 싶은 곳이 있으면 말해 줘"라고 물어봐 줘.`;
+/* 프롬프트에 넣을 기획서: 작성 중인 3주차 기획서 → 저장된 3주차 → 2주차 순서로 */
+async function planForMockup(){
+  const ok = t => t && !summarizePlan(t).empty;
+  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length && ok(toMd())) return summarizePlan(toMd()).text;
+  try{ const t3 = await fetchDoc(PLAN_PATH); if(ok(t3)) return summarizePlan(t3).text; }catch(_){}
+  try{ const t2 = await fetchDoc(SRC_PATH); if(t2) return summarizePlan(t2).text; }catch(_){}
+  return "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)";
+}
+/* 사진을 줄여서(긴 쪽 1600px) base64로. 작은 png는 그대로 */
+async function shrinkImg(file){
+  let bmp; try{ bmp = await createImageBitmap(file); }catch(_){ throw new Error("이 그림 파일은 열 수 없어요. jpg나 png로 바꿔서 올려 주세요."); }
+  const sc = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const toB64 = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.readAsDataURL(blob); });
+  if(/png/.test(file.type) && sc === 1 && file.size < 1.5e6) return { ext:"png", b64:await toB64(file), blob:file };
+  const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * sc); cv.height = Math.round(bmp.height * sc);
+  const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+  const blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.88));
+  return { ext:"jpg", b64:await toB64(blob), blob };
+}
+const LOCAL_IMG = {};   // 방금 올린 그림은 GitHub 반영을 기다리지 않고 바로 보여 줘요
+const docDir = () => (W.doc && W.doc.path.includes("/")) ? W.doc.path.replace(/[^/]*$/, "") : "";
+async function uploadPic(k, file, msg){
+  if(!getKey(W.st.repo)){ msg.textContent = "먼저 위에서 열쇠(코드)를 넣어 주세요."; msg.className = "wr-status err"; document.getElementById("wrKey").scrollIntoView({ behavior:"smooth" }); return; }
+  msg.textContent = `${IMG[k].alt} 올리는 중…`; msg.className = "wr-status";
+  try{
+    const im = await shrinkImg(file), rel = `images/${IMG[k].file}.${im.ext}`, path = docDir() + rel;
+    const g = await gh(`${repoPath()}/contents/${encodeURI(path)}?ref=main`);
+    const body = { message:`${W.w.week}주차 ${IMG[k].alt} 올리기 (사이트에서)`, content:im.b64, branch:"main" };
+    if(g.ok) body.sha = (await g.json()).sha;
+    const r = await gh(`${repoPath()}/contents/${encodeURI(path)}`, { method:"PUT", body:JSON.stringify(body), headers:{ "Content-Type":"application/json" } });
+    if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("저장 권한이 없어요. 열쇠를 확인해 주세요.");
+    if(!r.ok) throw new Error("그림을 올리지 못했어요. 잠시 뒤 다시 해 주세요.");
+    LOCAL_IMG[path] = URL.createObjectURL(im.blob);
+    setPicLine(k, rel); renderSegs(document.getElementById("wrDoc")); markDirty();
+    const saved = await save(true);
+    msg.textContent = saved ? `✅ ${IMG[k].alt}을 올려서 기획서 5-5에 넣었어요.` : `그림은 올렸어요. 아래 💾 저장하기를 눌러 기획서에도 넣어 주세요.`;
+    msg.className = "wr-status " + (saved ? "ok" : "warn");
+    document.getElementById("wrDoc").querySelector("img[data-pic='" + k + "']")?.scrollIntoView({ behavior:"smooth", block:"center" });
+  }catch(e){ msg.textContent = e.message || "그림을 올리지 못했어요."; msg.className = "wr-status err"; }
+}
+
 /* docx → 줄 글 (외부 라이브러리 없이 zip을 풀어요) */
 async function docxText(buf){
   const dv = new DataView(buf), u8 = new Uint8Array(buf);
@@ -625,17 +699,44 @@ const EXTRA_MD = {
 |  |  |
 `};
 const secOf = (h, sec) => /5-4|화면 시점/.test(h) ? "view" : /6️⃣|더 추가/.test(h) ? "extra" : /한 문장/.test(h) ? "intro" : /타깃|타겟/.test(h) ? "target" : /레퍼런스/.test(h) ? "refs" : /핵심/.test(h) ? "core" : /5-1/.test(h) ? "s51" : /5-2/.test(h) ? "s52" : /5-3/.test(h) ? "s53" : sec;
+/* re 제목이 든 조각 번호 (없으면 -1) */
+const headAt = re => W.segs.findIndex(s => s.t === "raw" && s.lines.some(l => /^#{2,3}\s/.test(l) && re.test(l)));
+/* md를 넣어요. before 제목이 있으면 그 제목 바로 앞(바로 위 --- 포함), 없으면 마지막 --- 앞 */
+function insertSec(md, before){
+  let i = -1, k = -1;
+  for(const re of before || []){ i = headAt(re); if(i >= 0){ const L = W.segs[i].lines; k = L.findIndex(l => /^#{2,3}\s/.test(l) && re.test(l)); const hr = L.lastIndexOf("---", k); if(hr >= 0 && L.slice(hr + 1, k).every(l => !l.trim())) k = hr; break; } }
+  if(i < 0){ for(let j = W.segs.length - 1; j >= 0; j--){ const s = W.segs[j]; if(s.t === "raw" && s.lines.lastIndexOf("---") >= 0){ i = j; k = s.lines.lastIndexOf("---"); break; } } }
+  const add = parseMd(md);
+  if(i < 0){ W.segs.push(...add); return; }
+  const s = W.segs[i], parts = [{ t:"raw", lines:s.lines.slice(0, k) }, ...add, { t:"raw", lines:s.lines.slice(k) }].filter(x => x.t !== "raw" || x.lines.length);
+  W.segs.splice(i, 1, ...parts);
+}
+const IMG = { sketch:{ alt:"내 손그림", file:"week3-sketch", label:"✏️ 내 손그림" }, mockup:{ alt:"Gemini 목업", file:"week3-mockup", label:"🖼️ Gemini 목업" } };
+const imgWait = k => `_(${IMG[k].alt}을 아직 올리지 않았어요)_`;
+const PIC_MD = `### 5-5. 스테이지 1 화면 그림
+
+> 그림판이나 종이에 그린 스테이지 1 화면과, 그 그림으로 Gemini에게 받은 목업을 올립니다.
+
+**${IMG.sketch.label}**
+
+${imgWait("sketch")}
+
+**${IMG.mockup.label}**
+
+${imgWait("mockup")}
+`;
+/* 5-5 칸의 그림 줄을 바꿔요 (칸이 없으면 5-4 다음에 만들어요) */
+function setPicLine(k, rel){
+  if(headAt(/5-5|화면 그림/) < 0) insertSec(PIC_MD, [/6️⃣|더 추가/]);
+  const s = W.segs[headAt(/5-5|화면 그림/)];
+  const re = new RegExp("^!\\[" + IMG[k].alt + "\\]|" + IMG[k].alt + "을 아직");
+  const i = s.lines.findIndex(l => re.test(l)), line = `![${IMG[k].alt}](${rel})`;
+  if(i >= 0) s.lines[i] = line;
+  else { const h = s.lines.findIndex(l => l.includes(IMG[k].label)); s.lines.splice(h < 0 ? s.lines.length : h + 1, 0, "", line); }
+}
 function ensureExtraSecs(F){
-  const has = re => W.segs.some(s => s.t === "raw" && s.lines.some(l => /^#{2,3}\s/.test(l) && re.test(l)));
-  const add = [];
-  if(!isBlank(F.view) && !has(/5-4|화면 시점/)) add.push(EXTRA_MD.view);
-  if(F.extras.length && !has(/6️⃣|더 추가/)) add.push(EXTRA_MD.extra);
-  if(!add.length) return;
-  let at = W.segs.length;    // 마지막 '---' 줄이 든 조각을 찾아 그 줄 앞에서 나눠 넣어요
-  for(let i = W.segs.length - 1; i >= 0; i--){ const s = W.segs[i]; if(s.t !== "raw") continue;
-    const k = s.lines.lastIndexOf("---"); if(k < 0) continue;
-    W.segs.splice(i, 1, ...[{ t:"raw", lines:s.lines.slice(0, k) }, { t:"raw", lines:s.lines.slice(k) }].filter(x => x.lines.length)); at = k > 0 ? i + 1 : i; break; }
-  W.segs.splice(at, 0, ...parseMd(add.join("\n")));
+  if(!isBlank(F.view) && headAt(/5-4|화면 시점/) < 0) insertSec(EXTRA_MD.view, [/5-5|화면 그림/, /6️⃣|더 추가/]);
+  if(F.extras.length && headAt(/6️⃣|더 추가/) < 0) insertSec(EXTRA_MD.extra);
 }
 function mergeFill(F){
   const log = []; let sec = "";
@@ -743,7 +844,7 @@ function applyPending(){
 
 function reviewBox(){
   return `<section class="wr-ai" id="wrAi">
-    <div class="wr-ai-title">🤖 Gemini와 기획서 보완하기 <span>2주차 기획서 불러오기 → 프롬프트 → Word 파일 → 아래 기획서에 반영</span></div>
+    <div class="wr-ai-title">🤖 Gemini와 기획서 보완하기 <span>2주차 기획서 불러오기 → 프롬프트 → Word 파일 → 기획서에 반영 → 화면 목업</span></div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>2주차 게임 기획서 불러오기</div>
       <div class="btns"><button class="btn primary" type="button" data-load>📥 2주차 기획서 불러오기</button></div>
       <p class="wr-status" data-msg></p>
@@ -766,7 +867,23 @@ function reviewBox(){
         <div class="btns"><button class="btn" type="button" data-fill>✍️ 기획서에 반영하기</button></div></details>
       <p class="wr-status" data-fmsg></p>
       <div class="wr-ai-log" data-flist></div>
-      <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>, 다 됐으면 <b>📮 제출하기</b>를 눌러요.</p>
+      <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>를 눌러요.</p>
+    </div>
+    <div class="wr-ai-step" data-pic-area><div class="wr-ai-h"><i>5</i>스테이지 1 화면 그리고 목업 받기 <span>그림은 기획서 5-5에 들어가요</span></div>
+      <ol class="wr-ai-steps">
+        <li><b>그림판이나 종이</b>에 스테이지 1 화면을 그려요. 잘 그릴 필요 없어요. 플레이어·등장하는 것·점수·버튼이 <b>어디에 있는지</b>만 보이면 되고, 이름을 옆에 적어 두면 좋아요.</li>
+        <li>그린 그림을 저장하거나 사진을 찍어서 아래 <b>✏️ 내 손그림 올리기</b>로 올려요.</li>
+        <li><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>에 <b>그림 파일을 첨부</b>하고, 프롬프트를 붙여 넣어 보내요. 고치고 싶은 곳은 "버튼을 더 크게"처럼 말해서 다시 받아요.</li>
+        <li>마음에 드는 목업 이미지를 내려받아 <b>🖼️ Gemini 목업 올리기</b>로 올려요.</li>
+      </ol>
+      <details class="wr-ai-peek" data-mock-peek><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-mock-out>${esc(MOCKUP_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-mockp>📋 목업 요청 프롬프트 복사 (내 기획서 포함)</button></div>
+      <div class="wr-ai-drop" data-pic-drop>
+        <label class="btn primary"><input type="file" accept="image/*" data-pic="sketch" hidden>✏️ 내 손그림 올리기</label>
+        <label class="btn primary"><input type="file" accept="image/*" data-pic="mockup" hidden>🖼️ Gemini 목업 올리기</label>
+      </div>
+      <p class="wr-status" data-pmsg></p>
+      <p class="hint">다 됐으면 아래 <b>📮 제출하기</b>를 눌러요.</p>
     </div>
   </section>`;
 }
@@ -795,6 +912,16 @@ function mountReview(){
     runFill(paste.value, fmsg, flist);
   };
   box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
+  const pmsg = box.querySelector("[data-pmsg]"), mockOut = box.querySelector("[data-mock-out]");
+  const fullMock = async () => { const t = MOCKUP_PROMPT + "\n\n" + await planForMockup(); mockOut.textContent = t; return t; };
+  box.querySelector("[data-mock-peek]").addEventListener("toggle", e => { if(e.target.open) fullMock(); });
+  box.querySelector("[data-mockp]").onclick = async e => { const b = e.currentTarget; copyText(await fullMock(), b); };
+  if(W.doc && W.doc.path === PLAN_PATH){
+    box.querySelectorAll("input[data-pic]").forEach(inp => inp.onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) uploadPic(inp.dataset.pic, f, pmsg); });
+  }else{
+    const i = W.w.docs.findIndex(d => d.path === PLAN_PATH);
+    box.querySelector("[data-pic-drop]").innerHTML = `<a class="btn primary" href="#/write/${W.w.week}/${esc(W.st.repo)}/${i < 0 ? 0 : i}">✏️ 작성하기에서 그림 올리기</a>`;
+  }
 }
 
 /* ---------- 페이지 ---------- */

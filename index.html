@@ -121,6 +121,7 @@ button{font:inherit;cursor:pointer}
 .md ul{padding-left:22px}
 .md li:has(> input[type=checkbox]){list-style:none;margin-left:-20px}
 .md img{max-width:100%}
+.md img.wr-pic,.md p>img{max-height:520px;border:1px solid var(--line);border-radius:10px;display:block;margin:6px 0}
 
 /* status table */
 .tbl-wrap{background:#fff;border-radius:var(--radius);padding:8px;overflow-x:auto}
@@ -561,9 +562,10 @@ async function fetchDoc(st, ref, path){
   if(!r.ok) throw new Error(r.status);
   return r.text();
 }
-function renderMd(text){
+function renderMd(text, base){
   const html = DOMPurify.sanitize(marked.parse(text, {gfm:true, breaks:true}));
   const box = document.createElement("div"); box.innerHTML = html;
+  if(base) box.querySelectorAll("img").forEach(im => { const src = im.getAttribute("src") || ""; if(!/^(https?:|data:|blob:|\/)/.test(src)) im.setAttribute("src", base + src.replace(/^\.\//, "")); });
   box.querySelectorAll("p").forEach(p => {
     const t = p.textContent.trim();
     if(/^예\s*[:：)]/.test(t)) p.classList.add("ex");
@@ -579,7 +581,7 @@ async function loadDetailDoc(st, w){
   docEl.innerHTML = `<div class="empty">문서를 불러오는 중…</div>`;
   try{
     const t = await fetchDoc(st, ref, w.docs[i].path);
-    docEl.innerHTML = t == null ? `<div class="empty">아직 문서가 없어요. (저장소가 만들어지지 않았거나 파일이 없어요)</div>` : renderMd(t);
+    docEl.innerHTML = t == null ? `<div class="empty">아직 문서가 없어요. (저장소가 만들어지지 않았거나 파일이 없어요)</div>` : renderMd(t, rawUrl(st, ref, w.docs[i].path.replace(/[^/]*$/, "")));
   }catch(e){ docEl.innerHTML = `<div class="empty">문서를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</div>`; }
 }
 async function loadPrintDocs(){
@@ -593,7 +595,7 @@ async function loadPrintDocs(){
     $("[data-date]", sh).textContent = rec ? fmtFull(rec.published_at) : "";
     $("[data-ver]", sh).textContent = rec ? `v${rec.version}` : "미제출 (작성 중 내용)";
     try{ const t = await fetchDoc(st, ref, meta.path);
-      $("[data-doc]", sh).innerHTML = t == null ? `<div class="empty">문서가 없어요.</div>` : renderMd(t);
+      $("[data-doc]", sh).innerHTML = t == null ? `<div class="empty">문서가 없어요.</div>` : renderMd(t, rawUrl(st, ref, meta.path.replace(/[^/]*$/, "")));
     }catch(e){ $("[data-doc]", sh).innerHTML = `<div class="empty">문서를 불러오지 못했어요.</div>`; }
   }));
 }
