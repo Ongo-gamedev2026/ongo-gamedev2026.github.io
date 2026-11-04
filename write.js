@@ -561,12 +561,14 @@ const MOCKUP_PROMPT = `너는 HTML 웹게임 화면을 디자인하는 게임 UI
 게임 코드는 만들지 마.
 
 [1단계: 이미지를 만들기 전에 먼저 확인해 줘]
-기획서 "5-2. 스테이지 1에 등장하는 것들"에 적힌 것을 하나씩 내 그림과 비교해서 표로 보여 줘.
-| 등장하는 것 | 내 그림에 있나? (✅ 있음 / ❓ 안 보임) | 그림에서 어디쯤 있는지 |
+아래 [확인할 목록]에 있는 것을 하나도 빠뜨리지 말고 하나씩 내 그림과 비교해서 표로 보여 줘.
+| 확인할 것 | 내 그림에 있나? (✅ 있음 / ❓ 안 보임) | 그림에서 어디쯤 있는지 |
+
+{{CHECK}}
+
 그리고 ❓인 것마다 나에게 물어봐 줘.
 - "○○는 화면에 보이지 않는 거야? 아니면 그리는 걸 빠뜨린 거야? 빠뜨렸다면 화면 어디에 둘까?"
 - 플레이어, 손님처럼 원래 화면에 보여야 할 것 같은 것과 점수 규칙, 레시피처럼 화면에 안 보여도 되는 것을 구분해서 물어봐.
-5-3 입력에 나오는 버튼이 그림에 없을 때도 같이 물어봐 줘.
 ❓가 하나도 없으면 바로 2단계로 넘어가.
 내가 답하기 전에는 이미지를 만들지 마.
 
@@ -594,10 +596,21 @@ const MOCKUP_PROMPT = `너는 HTML 웹게임 화면을 디자인하는 게임 UI
 /* 프롬프트에 넣을 기획서: 작성 중인 3주차 기획서 → 저장된 3주차 → 2주차 순서로 */
 async function planForMockup(){
   const ok = t => t && !summarizePlan(t).empty;
-  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length && ok(toMd())) return summarizePlan(toMd()).text;
-  try{ const t3 = await fetchDoc(PLAN_PATH); if(ok(t3)) return summarizePlan(t3).text; }catch(_){}
-  try{ const t2 = await fetchDoc(SRC_PATH); if(t2) return summarizePlan(t2).text; }catch(_){}
-  return "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)";
+  if(W.doc && W.doc.path === PLAN_PATH && W.segs.length && ok(toMd())) return summarizePlan(toMd());
+  try{ const t3 = await fetchDoc(PLAN_PATH); if(ok(t3)) return summarizePlan(t3); }catch(_){}
+  try{ const t2 = await fetchDoc(SRC_PATH); if(t2) return summarizePlan(t2); }catch(_){}
+  return null;
+}
+/* [확인할 목록]: 5-2 등장하는 것들 + 5-3 입력 */
+function checkList(S){
+  const ok = x => x && !/^\(?이름 없음\)?$|^\(?비어 있음\)?$/.test(x.trim());
+  const ents = (S ? S.s52 : []).filter(r => ok(r[0]) && (r[1] || r[2] || /플레이어/.test(r[0])));
+  const ins = (S ? S.s53rows : []).filter(r => ok(r[0]));
+  const out = ["[확인할 목록]", "A. 5-2 스테이지 1에 등장하는 것들"];
+  out.push(...(ents.length ? ents.map((r, i) => `   ${i + 1}) ${r[0]}${r[2] ? ` — 하는 일: ${r[2]}` : ""}`) : ["   (기획서에 아직 없어요. 내 그림에 보이는 것을 표로 정리해 줘.)"]));
+  out.push("B. 5-3 입력 (버튼이나 화면에 보여야 하는 것)");
+  out.push(...(ins.length ? ins.map((r, i) => `   ${i + 1}) ${r[0]}${r[1] ? ` → ${r[1]}` : ""}`) : ["   (없음)"]));
+  return out.join("\n");
 }
 /* 사진을 줄여서(긴 쪽 1600px) base64로. 작은 png는 그대로 */
 async function shrinkImg(file){
@@ -886,7 +899,7 @@ function reviewBox(){
         <li><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>에 <b>그림 파일을 첨부</b>하고, 프롬프트를 붙여 넣어 보내요. Gemini가 먼저 <b>5-2 등장하는 것들 중 그림에 안 보이는 것</b>을 물어보면, "화면에 안 보이는 거야" 또는 "빠뜨렸어, ○○에 둬"라고 답해요. 목업을 받은 뒤 고치고 싶은 곳은 "버튼을 더 크게"처럼 말해서 다시 받아요.</li>
         <li>마음에 드는 목업 이미지를 내려받아 <b>🖼️ Gemini 목업 올리기</b>로 올려요.</li>
       </ol>
-      <details class="wr-ai-peek" data-mock-peek><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-mock-out>${esc(MOCKUP_PROMPT)}</pre></details>
+      <details class="wr-ai-peek" data-mock-peek><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-mock-out>${esc(MOCKUP_PROMPT.replace("{{CHECK}}", "[확인할 목록]\n(내 기획서의 5-2 등장하는 것들과 5-3 입력이 자동으로 들어가요)"))}</pre></details>
       <div class="btns"><button class="btn" type="button" data-mockp>📋 목업 요청 프롬프트 복사 (내 기획서 포함)</button></div>
       <div class="wr-ai-drop" data-pic-drop>
         <label class="btn primary"><input type="file" accept="image/*" data-pic="sketch" hidden>✏️ 내 손그림 올리기</label>
@@ -923,7 +936,9 @@ function mountReview(){
   };
   box.querySelector("[data-fill]").onclick = () => runFill(paste.value, fmsg, flist);
   const pmsg = box.querySelector("[data-pmsg]"), mockOut = box.querySelector("[data-mock-out]");
-  const fullMock = async () => { const t = MOCKUP_PROMPT + "\n\n" + await planForMockup(); mockOut.textContent = t; return t; };
+  const fullMock = async () => { const sm = await planForMockup();
+    const t = MOCKUP_PROMPT.replace("{{CHECK}}", checkList(sm && sm.S)) + "\n\n" + (sm ? sm.text : "[내 게임 기획서]\n(아직 불러오지 못했어요. 내 게임을 두세 문장으로 직접 적어 줘.)");
+    mockOut.textContent = t; return t; };
   box.querySelector("[data-mock-peek]").addEventListener("toggle", e => { if(e.target.open) fullMock(); });
   box.querySelector("[data-mockp]").onclick = async e => { const b = e.currentTarget; copyText(await fullMock(), b); };
   if(W.doc && W.doc.path === PLAN_PATH){
