@@ -438,11 +438,19 @@ function viewTown(scene, repo){
     </div>`;
   }
   return `<div class="town-wrap">
-    <div class="town-head"><h1>🏡 온고 게임 마을</h1><span class="town-sub">${S.updated ? "제출 기록 갱신: " + esc(new Date(S.updated).toLocaleString("ko-KR")) : "아직 제출 기록이 없어요"}</span></div>
+    <div class="town-head"><h1>🏡 온고 게임 마을</h1><span class="town-sub">${S.updated ? "제출 기록 갱신: " + esc(new Date(S.updated).toLocaleString("ko-KR")) : "아직 제출 기록이 없어요"}</span>
+      <span class="town-btns"><button class="tbtn" id="tHelp">❓ 마을 안내</button></span></div>
     <div class="town-scroll"><canvas id="town" tabindex="0" aria-label="온고 게임 마을"></canvas></div>
     <p class="town-help">⬅️➡️⬆️⬇️ / WASD 이동 · <b>Space</b> 조사하기 · 집이나 건물을 누르면 그 앞까지 걸어가요 · 굴뚝 연기와 ★ = 제출한 주차 수</p>
   </div>`;
 }
+/* 마을 첫 화면 안내 (한 장 = 줄 목록, Space/클릭으로 넘겨요) */
+const VILLAGE_WELCOME = [
+  ["🏡 온고 게임 마을에 온 걸 환영해요!", "온양고 게임제작반 친구들이 한 집씩 살면서", "AI와 함께 나만의 게임을 만들어 가는 마을이에요."],
+  ["🕹️ 이렇게 움직여요", "방향키(⬅️➡️⬆️⬇️)나 WASD로 걷고, Space로 말을 걸거나 조사해요.", "가고 싶은 곳을 마우스로 누르면 그 앞까지 알아서 걸어가요."],
+  ["🗺️ 마을 둘러보기", "🏠 내 집에 들어가면 과제를 쓰고, 게임기로 내 게임을 할 수 있어요.", "📚 자료실 = 수업 자료 · 📊 게시판 = 전체 현황 · ★ = 제출한 주차 수"],
+  ["✨ 그럼 출발!", "먼저 내 이름이 적힌 집을 찾아가 보세요.", "안내를 다시 보고 싶으면 위쪽 ❓ 마을 안내 버튼을 눌러요."]
+];
 /* 화면 한 페이지 안에 마을/방이 다 보이도록 크기 맞추기 */
 function fitTown(){
   const cv = $("#town"); if(!cv) return;
@@ -490,10 +498,15 @@ function startTown(scene, repo){
       {label:"그만두기"}])
   };
   const from = S.townFrom; S.townFrom = undefined;
+  // 마을 환영 안내: 처음 접속했을 때 한 번 (집에서 나올 때는 생략). ❓ 버튼으로 다시 볼 수 있어요.
+  let seen = false; try { seen = sessionStorage.getItem("townWelcome") === "1"; sessionStorage.setItem("townWelcome", "1"); } catch(_){}
+  const welcome = VILLAGE_WELCOME;
   Town.start(cv, { scene, data, actions, repo, idx, from,
-    intro: scene === "house" ? [`${label(st)}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."] : null,
+    intro: scene === "house" ? [`${label(st)}의 작업실에 왔어요!`, "액자는 주차별 전시, 게임기는 내 게임, 책상에서는 과제를 써요."]
+         : (from === undefined && !seen ? welcome : null),
     onExit: () => { S.townFrom = idx; location.hash = "#/"; } });
   const ab = $("#tArcade"); if(ab) ab.onclick = () => arcade();
+  const hb = $("#tHelp"); if(hb) hb.onclick = () => { Town.pages(welcome); cv.focus({preventScroll:true}); };
   const kb = $("#tKey");
   if(kb && st){ const mark = on => { kb.textContent = on ? "🔑 열쇠 연결됨" : "🔑 내 열쇠"; kb.classList.toggle("on", on); };
     mark(Writer.hasKey(st.repo)); kb.onclick = () => Writer.keyDialog(st.repo, on => { mark(on); cv.focus({preventScroll:true}); }); }

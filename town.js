@@ -310,7 +310,7 @@ function start(canvas, opts){
   canvas.onpointerdown = e => onPointer(e);
   const loop = now => { if (G !== g) return; update(g, now); draw(g, now); g.raf = requestAnimationFrame(loop); };
   g.raf = requestAnimationFrame(loop);
-  if (opts.intro) setTimeout(() => { if (G===g && !g.dialog) say(opts.intro); }, 300);
+  if (opts.intro) setTimeout(() => { if (G===g && !g.dialog) pages(opts.intro); }, 300);
 }
 
 function paintBg(g){
@@ -400,12 +400,18 @@ function interact(){
 }
 
 /* ---------- 대화창 ---------- */
-function say(lines, choices){ if (!G) return; G.keys = []; G.path = null; G.dialog = { lines:lines.filter(Boolean), choices: choices && choices.length ? choices : null, sel:0, rects:[] }; }
+function say(lines, choices, next){ if (!G) return; G.keys = []; G.path = null; G.dialog = { lines:lines.filter(Boolean), choices: choices && choices.length ? choices : null, sel:0, rects:[], next }; }
+/* 여러 장짜리 안내: [[줄, 줄], [줄, 줄], ...] — Space/클릭으로 다음 장 */
+function pages(list){
+  if (!Array.isArray(list[0])) return say(list);
+  const show = i => say(list.length > 1 ? list[i].map((t, k) => k===0 ? `${t}   (${i+1}/${list.length})` : t) : list[i], null, i+1 < list.length ? () => show(i+1) : null);
+  show(0);
+}
 function moveSel(d){ const dl = G.dialog; dl.sel = (dl.sel + d + dl.choices.length) % dl.choices.length; }
 function closeDialog(){ if (G) G.dialog = null; }
 function confirm(){
   const dl = G.dialog; if (!dl) return;
-  if (!dl.choices){ G.dialog = null; return; }
+  if (!dl.choices){ G.dialog = null; if (dl.next) dl.next(); return; }
   const ch = dl.choices[dl.sel]; G.dialog = null; if (ch && ch.fn) ch.fn();
 }
 
@@ -521,5 +527,5 @@ function openArcade(url, title){
 }
 function closeArcade(){ const b = document.getElementById("arcadeBox"); if (b) b.remove(); }
 
-window.Town = { start, stop, say, openArcade, closeArcade };
+window.Town = { start, stop, say, pages, openArcade, closeArcade };
 })();
