@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script src="town.js"></script>
+<script src="review.js"></script>
 <script src="write.js"></script>
 <style>
 :root{
@@ -276,6 +277,17 @@ textarea.wr-ai-paste.mono{max-height:220px;overflow:auto!important}
   .md h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .sheet-head td.k{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+.wr-ver-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.wr-ver-row input{width:64px;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:8px}
+.wr-paste{border:2px dashed #b9b4ef;border-radius:12px;padding:14px;text-align:center;color:var(--sub);font-size:14px;cursor:text;outline:none}
+.wr-paste:focus{border-color:#6258d8;background:#f6f5ff}
+.wr-paste label.btn{cursor:pointer}
+.wr-tprev img{max-width:320px;width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;display:block}
+.wr-friends{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:8px 0}
+.wr-friend{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;text-decoration:none;color:inherit;background:#fafaff}
+.wr-friend:hover{border-color:#6258d8}
+.wr-friend small{color:var(--sub);font-size:12.5px}
+.wr-friend.done{background:#ecfdf3;border-color:#86efac}
 </style>
 </head>
 <body>
