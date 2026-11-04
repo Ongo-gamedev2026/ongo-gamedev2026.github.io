@@ -889,9 +889,9 @@ function reviewBox(){
     </div>
     <div class="wr-ai-step" data-fill-area><div class="wr-ai-h"><i>4</i>Word 파일 올려서 기획서에 반영하기 <span>바뀐 칸은 노랑, 새로 생긴 칸은 초록으로 표시돼요</span></div>
       <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-file hidden>📄 Word 파일 올리기 (.docx)</label><span data-fname class="hint" style="margin:0"></span></div>
-      <details class="wr-ai-peek"><summary>파일이 안 되면: Gemini 답을 붙여 넣기</summary>
-        <textarea class="wr-in wr-ai-paste" rows="4" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
-        <div class="btns"><button class="btn" type="button" data-fill>✍️ 기획서에 반영하기</button></div></details>
+      <div class="wr-ai-or">또는 <b>Gemini가 글로 정리해 준 답</b>을 복사해서 붙여 넣어요</div>
+      <textarea class="wr-in wr-ai-paste" rows="5" data-paste placeholder="[1 한 문장 소개] ... 처럼 시작하는 Gemini 답을 통째로 복사해 붙여 넣어요"></textarea>
+      <div class="btns"><button class="btn primary" type="button" data-fill>✍️ 붙여 넣은 글을 기획서에 반영하기</button></div>
       <p class="wr-status" data-fmsg></p>
       <div class="wr-ai-log" data-flist></div>
       <p class="hint">반영된 내용을 확인하고 내 말로 다듬은 뒤 아래 <b>💾 저장하기</b>를 눌러요. 기획서를 다 쓰면 맨 아래 <b>🎨 스테이지 1 화면 그리고 목업 받기</b>로 이어져요.</p>
@@ -1054,11 +1054,12 @@ const LOG_PROMPT = `지금까지 우리가 나눈 대화를 처음부터 끝까�
 [게임 제목]
 [요청] 종류 | 내가 요청한 내용(한 문장) | 결과 | 남은 문제 (없으면 "없음")
 [ver2 바뀐 점] 처음 만든 게임(ver1)과 비교해서 바뀐 점을 한 줄로
+[비교] 비교할 것 | ver1에서는 | ver2에서는  (ver1과 ver2가 다른 점을 하나마다 한 줄씩, 3개 이상)
 [가장 효과가 좋았던 요청] 원하는 대로 가장 잘 고쳐진 요청을 내가 보낸 문장 그대로
 [다음에 할 일] 아직 해결하지 못한 것 (하나마다 한 줄)`;
 
 function parseLog(text){
-  const R = { title:"", reqs:[], ver2:"", best:"", next:[] }; let hit = 0;
+  const R = { title:"", reqs:[], ver2:"", best:"", next:[], cmp:[] }; let hit = 0;
   const kindRe = /^(➕|✏️|🐞)?\s*(추가|수정|버그)/;
   text.replace(/\r/g, "").split("\n").forEach(raw => {
     const l = raw.replace(/\*\*/g, "").replace(/^[\s>*•·\-–]+/, "").trim(); if(!l) return;
@@ -1070,6 +1071,7 @@ function parseLog(text){
     }
     const tag = m[1].replace(/\s/g, ""), val = m[2].trim(); hit++;
     if(/^요청$|수정요청|추가요청/.test(tag)){ const c = cells(val); if(!isBlank(c[0])) R.reqs.push([c[0], c[1] || "", c[2] || "", c.slice(3).join(" | ")]); }
+    else if(/^비교/.test(tag)){ const c = cells(val); if(!isBlank(c[0]) && c.length >= 2) R.cmp.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
     else if(/제목/.test(tag)) R.title = val;
     else if(/ver2|바뀐/.test(tag)) R.ver2 = val;
     else if(/효과|좋았던요청/.test(tag)) R.best = val.replace(/^["“'「]|["”'」]$/g, "");
@@ -1130,6 +1132,18 @@ function mergeLog(R){
     const v = segUnder(/버전 기록/, s => s.t === "table");
     const r = v && v.rows.find(r => /ver\s*2\b/i.test(r[0].text || r[0].val || ""));
     if(r && r[2] && !r[2].ro && (r[2].val || "").trim() !== R.ver2){ r[2].hl = (r[2].val || "").trim() ? "chg" : "new"; r[2].val = R.ver2; log.push("✏️ 버전 기록 · ver2 바뀐 점"); }
+  }
+  if(R.cmp.length){
+    const t = segUnder(/ver1 vs ver2/, s => s.t === "table");
+    if(t){
+      const key = v => normName(v).slice(0, 20);
+      R.cmp.forEach(q => {
+        if(t.rows.some(r => key(r[0].val || "") && key(r[0].val || "") === key(q[0]))) return;
+        let r = t.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); }
+        q.forEach((v, i) => { if(r[i] && !isBlank(v)){ r[i].val = v; r[i].hl = "new"; } });
+        log.push(`🆕 ver1 vs ver2 비교: ${q[0]}`);
+      });
+    }
   }
   if(!isBlank(R.best)){
     const c = segUnder(/가장 효과가 좋았던/, s => s.t === "code");
@@ -1278,11 +1292,11 @@ function gameBoxFull(lite){
     <div class="wr-ai-step" data-log-area><div class="wr-ai-h"><i>9</i>요청한 내용을 Word 파일로 정리하기 <span>같은 채팅에 보내요</span></div>
       <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(LOG_PROMPT)}</pre></details>
       <div class="btns"><button class="btn" type="button" data-logp>📋 Word 정리 요청 프롬프트 복사</button></div>
-      <p class="hint">Gemini가 Word 파일을 바로 주지 않으면 <b>Google Docs로 내보내기 → 파일 → 다운로드 → Microsoft Word(.docx)</b>로 받아요. 받은 파일을 올리면 개발일지 <b>3️⃣ 요청 기록 · 4️⃣ ver2 바뀐 점 · 💬 · 📌</b>에 채워져요.</p>
+      <p class="hint">Gemini가 Word 파일을 바로 주지 않으면 <b>Google Docs로 내보내기 → 파일 → 다운로드 → Microsoft Word(.docx)</b>로 받거나, Gemini가 글로 보여 준 답을 복사해 아래 칸에 붙여 넣어요. 올리거나 붙여 넣으면 개발일지 <b>3️⃣ 요청 기록 · 4️⃣ ver2 바뀐 점 · 🤔 비교표 · 💬 · 📌</b>에 채워져요.</p>
       <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-lfile hidden>📄 Word 파일 올리기 (.docx)</label><span data-lname class="hint" style="margin:0"></span></div>
-      <details class="wr-ai-peek"><summary>파일이 안 되면: Gemini 답을 붙여 넣기</summary>
-        <textarea class="wr-in wr-ai-paste" rows="4" data-lpaste placeholder="[게임 제목] ... [요청] ... 처럼 시작하는 Gemini 답을 붙여 넣어요"></textarea>
-        <div class="btns"><button class="btn" type="button" data-lfill>✍️ 개발일지에 반영하기</button></div></details>
+      <div class="wr-ai-or">또는 <b>Gemini가 글로 정리해 준 답</b>을 복사해서 붙여 넣어요</div>
+      <textarea class="wr-in wr-ai-paste" rows="5" data-lpaste placeholder="[게임 제목] ... [요청] ... 처럼 시작하는 Gemini 답을 통째로 복사해 붙여 넣어요"></textarea>
+      <div class="btns"><button class="btn primary" type="button" data-lfill>✍️ 붙여 넣은 글을 개발일지에 반영하기</button></div>
       <p class="wr-status" data-lmsg></p>
       <div class="wr-ai-log" data-llist></div>
       <p class="hint">마지막으로 <b>💬 좋았던 이유 · 🤔 비교 소감</b>은 내 말로 쓰고 💾 저장 → 📮 제출해요.</p>
