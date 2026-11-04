@@ -861,6 +861,8 @@ async function runFill(text, msg, list){
   list.querySelector("[data-undo]").onclick = () => { W.segs = JSON.parse(FILL_UNDO); renderSegs(document.getElementById("wrDoc")); list.innerHTML = ""; msg.textContent = "되돌렸어요."; msg.className = "wr-status"; };
 }
 function applyPending(){
+  if(onDevlog()){ let p = null; try{ p = sessionStorage.getItem("pendingPrompt:" + W.st.repo); sessionStorage.removeItem("pendingPrompt:" + W.st.repo); }catch(_){}
+    const c = p && segUnder(/1️⃣/, s => s.t === "code"); if(c && !(c.val || "").trim() && putPromptInLog(p)) setStatus("학생 페이지에서 복사한 프롬프트를 1️⃣에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); }
   let t = null; try{ t = sessionStorage.getItem("pendingFill:" + W.st.repo); sessionStorage.removeItem("pendingFill:" + W.st.repo); }catch(_){}
   const box = document.getElementById("wrAi"); if(!t || !box) return;
   runFill(t, box.querySelector("[data-fmsg]"), box.querySelector("[data-flist]"));
@@ -1215,12 +1217,16 @@ function mountSlot(box, ver){
     await uploadGame(ver, s, el.querySelector("[data-gnote]").value.trim(), msg); b.disabled = false; };
 }
 
-function gameBox(){
+function gameBox(lite){
+  if(lite) return gameBoxFull(true).split('<!--LITE-END-->')[0];
+  return gameBoxFull(false).replace('<!--LITE-END-->','');
+}
+function gameBoxFull(lite){
   const gem = `<a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>`;
   return `<section class="wr-ai" id="wrGame">
     <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 프롬프트 → 목업 → ver1 → 수정 요청 → ver2 → Word 정리</span></div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>3주차 게임 기획서 불러오기</div>
-      <div class="btns"><button class="btn primary" type="button" data-gload>📥 3주차 기획서와 목업 불러오기</button></div>
+      <div class="btns"><button class="btn primary" type="button" data-gload>📥 3주차 기획서 불러오기</button></div>
       <p class="wr-status" data-msg></p>
       <pre class="wr-ai-out" data-plan hidden></pre>
     </div>
@@ -1239,6 +1245,9 @@ function gameBox(){
         <li>2단계에서 복사한 프롬프트를 붙여 넣고 보내요.</li>
       </ol>
     </div>
+    ${lite ? `<div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>게임 확인 · ver1·ver2 올리기 · 수정 요청 · Word 정리는 작성하기 화면에서 <span>5~9단계</span></div>
+      <div class="btns"><a class="btn primary" href="#/write/${W.w.week}/${esc(W.st.repo)}/0">✏️ 작성하기에서 이어 하기</a></div></div>
+  </section>` : ""}<!--LITE-END-->
     <div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>만들어진 게임 확인하고 내려받기 <span>Canvas 미리 보기에서 먼저 해 봐요</span></div>
       <p class="hint">Canvas 오른쪽 위 <b>코드(&lt;/&gt;)</b>를 눌러 전체 코드를 복사해 아래 칸에 붙여 넣거나, 내려받은 html 파일을 골라요. <b>▶ 미리 해 보기</b>로 확인하고 <b>💾 ver1.html 내려받기</b>로 내 컴퓨터에도 저장해요.</p>
       ${slotHtml(1)}
@@ -1317,8 +1326,9 @@ function mountGame(){
     }catch(_){ msg.textContent = "기획서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
   if(G.plan) ready();
-  cp.onclick = () => { const t = gamePrompt(); copyText(t, cp); if(putPromptInLog(t)) setStatus("프롬프트를 개발일지 1️⃣에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); };
+  cp.onclick = () => { const t = gamePrompt(); copyText(t, cp); G.lastPrompt = t; if(putPromptInLog(t)) setStatus("프롬프트를 개발일지 1️⃣에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); else { try{ sessionStorage.setItem("pendingPrompt:" + W.st.repo, t); }catch(_){} } };
   mountSlot(box, 1); mountSlot(box, 2);
+  if(!box.querySelector("[data-rwhat]")) return;   // 학생 페이지(1~4단계만)
 
   /* 7단계 요청 문장 만들기 */
   let kind = "add";
@@ -1413,10 +1423,14 @@ function keyDialog(repo, onDone){
 }
 
 /* 학생 상세 페이지(#/week/N/repo)에도 같은 🤖 상자를 보여 줘요. 4단계 채우기는 작성하기 화면으로 넘어가서 채워요. */
-function reviewFor(n, repo){ const w = findWeek(n); return w && REVIEW_WEEKS.includes(w.week) ? reviewBox() : ""; }
+function reviewFor(n, repo){ const w = findWeek(n), st = findStu(repo); if(!w) return "";
+  if(REVIEW_WEEKS.includes(w.week)) return reviewBox();
+  if(GAME_WEEKS.includes(w.week) && st){ W.w = w; W.st = st; return gameBox(true); }
+  return ""; }
 function mountReviewFor(n, repo){
-  const w = findWeek(n), st = findStu(repo); if(!w || !st || !REVIEW_WEEKS.includes(w.week)) return;
-  W.w = w; W.st = st; W.doc = null; W.segs = []; W.dirty = false; mountReview();
+  const w = findWeek(n), st = findStu(repo); if(!w || !st || !(REVIEW_WEEKS.includes(w.week) || GAME_WEEKS.includes(w.week))) return;
+  W.w = w; W.st = st; W.doc = null; W.segs = []; W.dirty = false;
+  if(REVIEW_WEEKS.includes(w.week)) mountReview(); else mountGame();
 }
 
 window.Writer = { view, mount, keyDialog, reviewFor, mountReviewFor, hasKey: repo => !!getKey(repo), isDirty: () => W.dirty, reset: () => { W.dirty = false; }, _parse: parseMd, _toMd: segs => { W.segs = segs; return toMd(); } };
