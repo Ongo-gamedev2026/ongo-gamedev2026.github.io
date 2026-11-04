@@ -6,130 +6,8 @@ const T = 16;          // 타일 한 칸 = 16px (화면에서는 S배로 확대)
 const S = 3;           // 확대 배율 (선명한 도트를 위해 정수)
 const STEP_MS = 150;   // 한 칸 걷는 시간
 
-/* ================= ART: 도트 그림 ================= */
-const C = {
-  grass:"#5fae46", grass2:"#4f9a3a", grass3:"#78c25a", path:"#e2c48a", path2:"#c9a86c",
-  trunk:"#7a4a25", leaf:"#2f7d32", leaf2:"#3f9a40", leaf3:"#5cbf55",
-  wall:"#f3e3c0", wall2:"#d9c39a", door:"#8a5a2b", door2:"#5e3b1a", win:"#9fd7ff", winLit:"#ffe27a",
-  floor:"#c98f55", floor2:"#b57d47", iwall:"#efe6d2", iwall2:"#d8ccb0", trim:"#8a5a2b",
-  skin:"#ffd7b0", hair:"#3b2a20", shirt:"#e8443a", pants:"#2d3e74", shoe:"#2a1d16", ink:"#1d1d2b"
-};
-const ROOF = ["#d94b3d","#e88a2d","#3d7fd9","#8a5bd6","#e05a9a","#2fa39a","#c9a227","#5a6f88"];
 const rand = (x, y, k=0) => { const n = Math.sin(x*127.1 + y*311.7 + k*74.7) * 43758.5453; return n - Math.floor(n); };
-function R(c, x, y, w, h, col){ c.fillStyle = col; c.fillRect(x, y, w, h); }
-
-function drawGrass(c, tx, ty){
-  const x = tx*T, y = ty*T; R(c, x, y, T, T, C.grass);
-  for (let i=0;i<5;i++){ const px = Math.floor(rand(tx,ty,i)*14)+1, py = Math.floor(rand(ty,tx,i)*13)+1;
-    R(c, x+px, y+py, 1, 2, i%2 ? C.grass2 : C.grass3); }
-}
-function drawFlowers(c, tx, ty){
-  drawGrass(c, tx, ty); const x = tx*T, y = ty*T;
-  const cols = ["#fff","#ffd23f","#ff7aa8"];
-  for (let i=0;i<3;i++){ const px = 2+Math.floor(rand(tx,ty,i+9)*11), py = 2+Math.floor(rand(ty,tx,i+9)*11);
-    R(c, x+px, y+py, 2, 2, cols[i]); R(c, x+px, y+py+2, 1, 1, C.grass2); }
-}
-function drawPath(c, tx, ty){
-  const x = tx*T, y = ty*T; R(c, x, y, T, T, C.path);
-  for (let i=0;i<4;i++){ R(c, x+Math.floor(rand(tx,ty,i+3)*14)+1, y+Math.floor(rand(ty,tx,i+3)*14)+1, 2, 1, C.path2); }
-}
-function drawTree(c, tx, ty){
-  drawGrass(c, tx, ty); const x = tx*T, y = ty*T;
-  R(c, x+6, y+10, 4, 6, C.trunk);
-  R(c, x+3, y+2, 10, 9, C.leaf); R(c, x+1, y+4, 14, 5, C.leaf); R(c, x+5, y, 6, 2, C.leaf);
-  R(c, x+4, y+3, 4, 3, C.leaf2); R(c, x+5, y+2, 2, 1, C.leaf3); R(c, x+9, y+5, 3, 2, C.leaf2);
-}
-function drawFence(c, tx, ty){
-  drawGrass(c, tx, ty); const x = tx*T, y = ty*T;
-  R(c, x, y+6, T, 2, "#c79c62"); R(c, x, y+11, T, 2, "#c79c62");
-  R(c, x+2, y+4, 3, 11, "#e0b97c"); R(c, x+11, y+4, 3, 11, "#e0b97c");
-}
-/* 집: 5칸 x 4칸. 지붕 2줄, 벽 2줄, 문은 가운데(아래 줄) */
-function drawHouse(c, hx, hy, roof, lit){
-  const x = hx*T, y = hy*T, W = 5*T;
-  R(c, x+2, y+2*T, W-4, 2*T, C.wall); R(c, x+2, y+4*T-3, W-4, 3, C.wall2);
-  for (let i=0;i<4;i++) R(c, x+2, y+2*T+6+i*7, W-4, 1, C.wall2);
-  // 지붕
-  for (let i=0;i<2*T;i++){ const inset = Math.max(0, 10 - Math.floor(i/2)); R(c, x+inset, y+i, W-inset*2, 1, roof); }
-  for (let i=4;i<2*T;i+=5) R(c, x+2, y+i, W-4, 1, "rgba(0,0,0,.18)");
-  R(c, x, y+2*T-2, W, 3, "rgba(0,0,0,.28)");
-  // 굴뚝
-  R(c, x+W-20, y+2, 6, 10, "#8d6e63"); R(c, x+W-21, y+1, 8, 2, "#6d4c41");
-  // 창문
-  for (const wx of [x+6, x+W-18]){ R(c, wx, y+2*T+6, 12, 10, C.trim); R(c, wx+1, y+2*T+7, 10, 8, lit ? C.winLit : C.win);
-    R(c, wx+5, y+2*T+7, 1, 8, C.trim); R(c, wx+1, y+2*T+10, 10, 1, C.trim); }
-  // 문
-  const dx = x+2*T+2; R(c, dx, y+3*T-2, 12, T+2, C.door2); R(c, dx+1, y+3*T-1, 10, T+1, C.door); R(c, dx+8, y+3*T+8, 2, 2, "#ffd54a");
-}
-function drawLibrary(c, hx, hy){
-  const x = hx*T, y = hy*T, W = 6*T;
-  R(c, x+1, y+T, W-2, 3*T, "#e9e2d0");
-  for (let i=0;i<5;i++) R(c, x+7+i*19, y+T+10, 5, 2*T+6, "#cfc5ad");
-  R(c, x, y+T-2, W, 6, "#7b8aa0"); for (let i=0;i<T;i++){ const inset = Math.max(0, 48 - i*3); if (inset>=W/2) continue; R(c, x+inset, y+i, W-inset*2, 1, "#5d6d86"); }
-  const dx = x+2*T+8; R(c, dx, y+3*T-2, T, T+2, "#3e4a5e"); R(c, dx+1, y+3*T-1, T-2, T+1, "#5b6b84");
-  R(c, x+36, y+T+6, 24, 7, "#fff"); R(c, x+39, y+T+8, 18, 3, "#3e4a5e");
-}
-function drawBoard(c, tx, ty){
-  drawGrass(c, tx, ty); drawGrass(c, tx+1, ty); const x = tx*T, y = ty*T;
-  R(c, x+4, y+8, 3, 8, C.trunk); R(c, x+25, y+8, 3, 8, C.trunk);
-  R(c, x+1, y, 30, 12, "#8a5a2b"); R(c, x+3, y+2, 26, 8, "#f1e2bc");
-  R(c, x+5, y+3, 7, 5, "#ff9a8a"); R(c, x+14, y+3, 6, 6, "#9ad0ff"); R(c, x+22, y+4, 5, 4, "#c6f29b");
-}
-/* 집 안 */
-function drawFloor(c, tx, ty){ const x = tx*T, y = ty*T; R(c, x, y, T, T, C.floor); R(c, x, y+7, T, 1, C.floor2); R(c, x, y+15, T, 1, C.floor2); R(c, x+((tx+ty)%2?4:11), y, 1, 7, C.floor2); R(c, x+((tx+ty)%2?10:3), y+8, 1, 7, C.floor2); }
-function drawIWall(c, tx, ty, row){ const x = tx*T, y = ty*T; R(c, x, y, T, T, C.iwall); for (let i=2;i<T;i+=6) R(c, x+i, y, 1, T, C.iwall2); if (row===1){ R(c, x, y+12, T, 4, C.trim); } }
-function drawSide(c, tx, ty){ R(c, tx*T, ty*T, T, T, "#6b4a2b"); R(c, tx*T+(tx===0?T-3:0), ty*T, 3, T, "#8a5a2b"); }
-function drawFrame(c, tx, ty, st, isGame, color){
-  const x = tx*T, y = ty*T;
-  R(c, x+1, y+2, 14, 18, "#a0712f"); R(c, x+2, y+3, 12, 16, "#f6c768"); R(c, x+3, y+4, 10, 14, st ? "#fff" : "#4a4458");
-  if (!st){ R(c, x+5, y+9, 6, 1, "#6d6680"); R(c, x+7, y+7, 2, 5, "#6d6680"); return; }
-  if (isGame){ R(c, x+3, y+4, 10, 14, "#1e2a4a"); R(c, x+5, y+12, 6, 3, color); R(c, x+7, y+6, 2, 2, "#ffe27a"); R(c, x+4, y+15, 8, 2, "#4fbf5a"); }
-  else { R(c, x+4, y+5, 8, 1, color); for (let i=0;i<4;i++) R(c, x+4, y+8+i*2, i===3?5:8, 1, "#9a9aa8"); }
-  if (st === "v2"){ R(c, x+10, y+15, 4, 4, "#2563eb"); } else { R(c, x+10, y+15, 4, 4, "#16a34a"); }
-}
-function drawArcade(c, tx, ty, color){
-  const x = tx*T, y = ty*T;
-  R(c, x+2, y+30, 28, 3, "rgba(0,0,0,.25)");
-  R(c, x+3, y, 26, 31, "#222039"); R(c, x+4, y+1, 24, 6, color); R(c, x+7, y+2, 18, 4, "#fff6c2");
-  R(c, x+6, y+9, 20, 12, "#0b0b16"); R(c, x+7, y+10, 18, 10, "#163a5c");
-  R(c, x+10, y+16, 3, 3, "#ffe27a"); R(c, x+18, y+12, 4, 2, "#ff6b6b"); R(c, x+8, y+19, 16, 1, "#4fbf5a");
-  R(c, x+5, y+22, 22, 6, "#36335a"); R(c, x+9, y+23, 2, 3, "#bbb"); R(c, x+8, y+22, 4, 2, "#e8443a"); R(c, x+17, y+24, 3, 3, "#ffd23f"); R(c, x+22, y+24, 3, 3, "#3ee6ff");
-}
-function drawDesk(c, tx, ty){
-  const x = tx*T, y = ty*T, W = 4*T;
-  R(c, x+1, y+3, W-2, 10, "#8a5a2b"); R(c, x+1, y+3, W-2, 3, "#a8733a"); R(c, x+3, y+13, 3, 3, "#5e3b1a"); R(c, x+W-6, y+13, 3, 3, "#5e3b1a");
-  R(c, x+8, y-6, 16, 10, "#2b2b3a"); R(c, x+9, y-5, 14, 7, "#7fd1ff"); R(c, x+15, y+3, 2, 1, "#2b2b3a");
-  R(c, x+34, y, 10, 4, "#fff"); R(c, x+35, y+1, 8, 1, "#9a9aa8"); R(c, x+48, y-2, 3, 6, "#ffd23f");
-}
-function drawRug(c, tx, ty, w, h){ const x = tx*T, y = ty*T; R(c, x+2, y+2, w*T-4, h*T-4, "#b23b4e"); R(c, x+5, y+5, w*T-10, h*T-10, "#d6566b"); R(c, x+8, y+8, w*T-16, h*T-16, "#b23b4e"); }
-function drawMat(c, tx, ty){ const x = tx*T, y = ty*T; R(c, x, y, 2*T, T, "#6b4a2b"); R(c, x+3, y+3, 2*T-6, T-6, "#c9a86c"); }
-function drawPlant(c, tx, ty){ const x = tx*T, y = ty*T; R(c, x+5, y+10, 6, 6, "#b5651d"); R(c, x+3, y+3, 10, 8, C.leaf); R(c, x+6, y, 4, 4, C.leaf2); }
-
-/* 플레이어: 16x16, dir 0아래 1왼쪽 2오른쪽 3위, frame 0~2 */
-function drawPlayer(c, x, y, dir, frame){
-  x = Math.round(x); y = Math.round(y);
-  R(c, x+3, y+14, 10, 2, "rgba(0,0,0,.25)");
-  const step = frame===1 ? 1 : frame===2 ? -1 : 0;
-  // 다리
-  if (dir===0 || dir===3){ R(c, x+5, y+12+Math.max(0,step), 2, 3-Math.max(0,step), C.pants); R(c, x+9, y+12+Math.max(0,-step), 2, 3-Math.max(0,-step), C.pants);
-    R(c, x+5, y+14, 2, 1, C.shoe); R(c, x+9, y+14, 2, 1, C.shoe); }
-  else { R(c, x+6+step, y+12, 2, 3, C.pants); R(c, x+8-step, y+12, 2, 3, C.pants); R(c, x+6+step, y+14, 2, 1, C.shoe); R(c, x+8-step, y+14, 2, 1, C.shoe); }
-  // 몸
-  R(c, x+4, y+8, 8, 5, C.shirt); R(c, x+4, y+12, 8, 1, "#b8322b");
-  if (dir===0 || dir===3){ R(c, x+3, y+9, 1, 3, C.skin); R(c, x+12, y+9, 1, 3, C.skin); }
-  else { R(c, dir===1 ? x+7-step : x+8+step, y+9, 2, 3, C.skin); }
-  // 머리
-  R(c, x+4, y+2, 8, 7, C.skin);
-  if (dir===3){ R(c, x+4, y+1, 8, 7, C.hair); }
-  else { R(c, x+4, y+1, 8, 3, C.hair); R(c, x+3, y+2, 1, 4, C.hair); R(c, x+12, y+2, 1, 4, C.hair);
-    if (dir===0){ R(c, x+6, y+5, 1, 2, C.ink); R(c, x+9, y+5, 1, 2, C.ink); R(c, x+5, y+7, 1, 1, "#ff9e9e"); R(c, x+10, y+7, 1, 1, "#ff9e9e"); }
-    if (dir===1){ R(c, x+5, y+5, 1, 2, C.ink); R(c, x+9, y+2, 3, 5, C.hair); }
-    if (dir===2){ R(c, x+10, y+5, 1, 2, C.ink); R(c, x+4, y+2, 3, 5, C.hair); } }
-}
-
-
-/* ================= ART 2: 마을 — 부드러운 일러스트 =================
-   마을(바깥)은 매끈한 그림, 집 안은 도트 그림이에요.
+/* ================= ART: 부드러운 일러스트 (마을 + 작업실) =================
    좌표 단위: 한 칸 = 32 (그릴 때 화면 크기에 맞게 늘려요) */
 const K = 32;
 const F = {
@@ -239,6 +117,118 @@ function fPlayer(c, x, y, dir, frame){
   if (dir!==1) circle(c, cx+4+ex, by-12, 1.6, "#1d1d2b");
   if (dir===0){ circle(c, cx-7, by-9, 2, "#ff9e9e"); circle(c, cx+7, by-9, 2, "#ff9e9e"); }
 }
+
+/* ---------- 작업실(집 안) ---------- */
+function fRoomShell(c, m, accent){
+  const W = m.W*K, H = m.H*K;
+  // 마룻바닥
+  c.fillStyle = "#e3b27c"; c.fillRect(0, 0, W, H);
+  for (let y=2*K; y<H; y+=16){ const row = (y/16)|0;
+    c.fillStyle = row%2 ? "#dcaa73" : "#e6b882"; c.fillRect(0, y, W, 16);
+    c.fillStyle = "rgba(120,70,30,.18)"; c.fillRect(0, y+15, W, 1);
+    for (let x = (row%3)*37; x < W; x += 112) c.fillRect(x, y, 1, 15); }
+  // 뒷벽 (벽지 + 굽도리)
+  c.fillStyle = "#fbf3e2"; c.fillRect(0, 0, W, 2*K);
+  for (let x=8; x<W; x+=24){ c.fillStyle = "rgba(230,200,160,.35)"; c.fillRect(x, 0, 8, 2*K-10); }
+  c.fillStyle = "#c98f5a"; c.fillRect(0, 2*K-10, W, 10); c.fillStyle = "#e0a96f"; c.fillRect(0, 2*K-10, W, 3);
+  c.fillStyle = "rgba(90,50,20,.15)"; c.fillRect(0, 2*K, W, 6);
+  // 옆벽·아랫벽 (위에서 본 두꺼운 벽)
+  const wall = (x,y,w,h) => { c.fillStyle = "#8b5e3c"; c.fillRect(x,y,w,h); };
+  wall(0, 0, K, H); wall(W-K, 0, K, H); wall(0, H-K, W, K);
+  c.fillStyle = "#a8774f"; c.fillRect(K-6, 0, 6, H-K); c.fillRect(W-K, 0, 6, H-K); c.fillRect(K-6, H-K, W-2*K+12, 6);
+  // 문 (아래 가운데 출구 칸)
+  for (let x=0;x<m.W;x++) if (m.tiles[(m.H-1)*m.W+x]==="exit"){
+    c.fillStyle = "#e3b27c"; c.fillRect(x*K, H-K, K, K);
+    c.fillStyle = "#6b4426"; c.fillRect(x*K-4, H-K, 4, K); c.fillRect(x*K+K, H-K, 4, K);
+    c.fillStyle = "#7fb76a"; c.fillRect(x*K, H-10, K, 10); }
+}
+function fRug(c, tx, ty, w, h, accent){
+  const x = tx*K, y = ty*K, W = w*K, H = h*K;
+  c.fillStyle = "rgba(90,50,20,.15)"; rr(c, x+4, y+6, W, H, 18); c.fill();
+  c.fillStyle = "#f6e7c8"; rr(c, x, y, W, H, 18); c.fill();
+  c.fillStyle = accent; rr(c, x+8, y+8, W-16, H-16, 12); c.fill();
+  c.fillStyle = "rgba(255,255,255,.22)"; rr(c, x+16, y+16, W-32, H-32, 8); c.fill();
+  for (let i=0;i<7;i++){ circle(c, x+W/2 + (i-3)*22, y+H-24, 3, "rgba(255,255,255,.55)"); circle(c, x+W/2 + (i-3)*22, y+24, 3, "rgba(255,255,255,.55)"); }
+}
+function fMat(c, tx, ty){ const x = tx*K, y = ty*K; c.fillStyle = "#b5835a"; rr(c, x-10, y-6, K+20, 16, 7); c.fill(); c.fillStyle = "#d8a777"; rr(c, x-6, y-3, K+12, 10, 5); c.fill(); }
+/* 액자: st = null(빈 액자) | "v1" | "v2" */
+function fFrame(c, tx, ty, st, isGame, accent){
+  const cx = tx*K + 16, x = cx-22, y = 7, w = 44, h = 40;
+  c.strokeStyle = "#a0714a"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(cx, 3); c.lineTo(x+8, y+2); c.moveTo(cx, 3); c.lineTo(x+w-8, y+2); c.stroke();
+  circle(c, cx, 3, 2.5, "#8b5e3c");
+  c.fillStyle = "rgba(90,50,20,.18)"; rr(c, x+2, y+4, w, h, 6); c.fill();
+  c.fillStyle = st ? "#e9b44c" : "#d9c7a6"; rr(c, x, y, w, h, 6); c.fill();
+  c.fillStyle = st ? "#fff8e6" : "#efe4cf"; rr(c, x+5, y+5, w-10, h-10, 3); c.fill();
+  if (!st){ c.fillStyle = "#c8b48f"; rr(c, cx-1.5, y+13, 3, 14, 1.5); c.fill(); rr(c, cx-7, y+18.5, 14, 3, 1.5); c.fill(); return; }
+  if (isGame){
+    c.fillStyle = "#2a3b6e"; rr(c, x+5, y+5, w-10, h-10, 3); c.fill();
+    c.fillStyle = "#58c46a"; c.fillRect(x+5, y+h-12, w-10, 7);
+    circle(c, x+15, y+h-16, 4, "#ffd84d"); c.fillStyle = "#ff7a7a"; rr(c, x+22, y+13, 8, 5, 2); c.fill();
+    circle(c, x+28, y+11, 1.2, "#fff"); circle(c, x+12, y+12, 1, "#fff");
+  } else {
+    c.fillStyle = accent; rr(c, x+10, y+11, 20, 3, 1.5); c.fill();
+    c.fillStyle = "#c9c2b4"; for (let i=0;i<3;i++){ rr(c, x+10, y+18+i*5, i===2 ? 12 : 20, 2.5, 1.2); c.fill(); }
+  }
+  circle(c, x+w-6, y+h-6, 6, st === "v2" ? "#3b82f6" : "#22c55e");
+  c.strokeStyle = "#fff"; c.lineWidth = 2; c.lineCap = "round"; c.lineJoin = "round";
+  c.beginPath(); c.moveTo(x+w-9, y+h-6); c.lineTo(x+w-6.5, y+h-3.5); c.lineTo(x+w-3, y+h-8.5); c.stroke();
+}
+function fArcade(c, tx, ty, tw, accent){
+  const cx = tx*K + tw*K/2, top = ty*K - 6, w = 54, x = cx - w/2, h = 2*K + 4;
+  c.fillStyle = "rgba(60,30,20,.22)"; c.beginPath(); c.ellipse(cx, top+h, w/2+6, 8, 0, 0, 7); c.fill();
+  c.fillStyle = shade(accent, -.25); rr(c, x, top, w, h, 10); c.fill();
+  c.fillStyle = accent; rr(c, x+4, top+3, w-8, h-6, 8); c.fill();
+  c.fillStyle = "#fff6d6"; rr(c, x+9, top+7, w-18, 9, 4); c.fill();
+  c.fillStyle = shade(accent, -.15); rr(c, x+18, top+10, w-36, 3, 1.5); c.fill();
+  c.fillStyle = "#1f2440"; rr(c, x+7, top+20, w-14, 24, 5); c.fill();
+  const sg = c.createLinearGradient(0, top+22, 0, top+42); sg.addColorStop(0, "#3f6fd8"); sg.addColorStop(1, "#22408f");
+  c.fillStyle = sg; rr(c, x+10, top+23, w-20, 18, 3); c.fill();
+  c.fillStyle = "#6ee07a"; c.fillRect(x+10, top+37, w-20, 4); circle(c, x+20, top+33, 3, "#ffd84d"); c.fillStyle = "#ff7a7a"; rr(c, x+30, top+27, 7, 4, 1.5); c.fill();
+  c.fillStyle = "rgba(255,255,255,.25)"; c.beginPath(); c.moveTo(x+10, top+23); c.lineTo(x+20, top+23); c.lineTo(x+10, top+33); c.closePath(); c.fill();
+  c.fillStyle = shade(accent, -.12); rr(c, x+5, top+47, w-10, 14, 5); c.fill();
+  c.fillStyle = "#333"; c.fillRect(x+14, top+50, 2, 6); circle(c, x+15, top+50, 3.5, "#e8443a");
+  circle(c, x+30, top+54, 3, "#ffd84d"); circle(c, x+39, top+54, 3, "#3ee6ff");
+}
+function fDesk(c, tx, ty, tw){
+  const x = tx*K + 6, y = ty*K - 4, w = tw*K - 12, h = 26;
+  c.fillStyle = "rgba(60,30,20,.2)"; rr(c, x+2, y+h-2, w, 10, 5); c.fill();
+  c.fillStyle = "#8a5a35"; c.fillRect(x+6, y+h-4, 6, 12); c.fillRect(x+w-12, y+h-4, 6, 12);
+  c.fillStyle = "#b07a4a"; rr(c, x, y+4, w, h-4, 6); c.fill();
+  c.fillStyle = "#c98f5a"; rr(c, x, y, w, 10, 5); c.fill();
+  // 노트북
+  const lx = x + 18; c.fillStyle = "#3a3f55"; rr(c, lx, y-22, 38, 26, 4); c.fill();
+  c.fillStyle = "#8fd3ff"; rr(c, lx+3, y-19, 32, 19, 2); c.fill();
+  c.fillStyle = "#fff"; c.fillRect(lx+7, y-15, 16, 2); c.fillRect(lx+7, y-11, 22, 2); c.fillRect(lx+7, y-7, 12, 2);
+  c.fillStyle = "#5a6078"; rr(c, lx-4, y+2, 46, 5, 2); c.fill();
+  // 공책 + 연필꽂이 + 스탠드
+  c.save(); c.translate(x+w/2+22, y+3); c.rotate(-.12); c.fillStyle = "#fff"; rr(c, 0, -2, 26, 10, 2); c.fill();
+  c.fillStyle = "#ffb3c1"; c.fillRect(0, -2, 4, 10); c.restore();
+  c.fillStyle = "#6fa8dc"; rr(c, x+w-30, y-10, 10, 14, 2); c.fill();
+  c.fillStyle = "#ffd84d"; c.fillRect(x+w-28, y-18, 2, 9); c.fillStyle = "#ff7a7a"; c.fillRect(x+w-24, y-16, 2, 7);
+  c.fillStyle = "#fff6c2"; c.beginPath(); c.moveTo(x+w-50, y-22); c.lineTo(x+w-38, y-22); c.lineTo(x+w-35, y-12); c.lineTo(x+w-53, y-12); c.closePath(); c.fill();
+  c.fillStyle = "#777"; c.fillRect(x+w-45, y-12, 2, 14);
+}
+function fPlant(c, tx, ty){
+  const cx = tx*K + 16, by = ty*K + 28;
+  c.fillStyle = "rgba(60,30,20,.2)"; c.beginPath(); c.ellipse(cx, by, 12, 4, 0, 0, 7); c.fill();
+  c.fillStyle = "#d77a4a"; c.beginPath(); c.moveTo(cx-10, by-14); c.lineTo(cx+10, by-14); c.lineTo(cx+7, by); c.lineTo(cx-7, by); c.closePath(); c.fill();
+  c.fillStyle = "#c06a3e"; rr(c, cx-11, by-16, 22, 5, 2); c.fill();
+  [[-8,-22,7],[7,-23,7],[0,-30,8],[-3,-21,6],[4,-34,5]].forEach(([dx,dy,r],i) => circle(c, cx+dx, by+dy, r, i%2 ? F.leaf2 : F.leaf));
+  circle(c, cx-2, by-32, 2.5, "rgba(255,255,255,.35)");
+}
+function paintRoom(c, m, o){
+  const accent = ROOF2[o.idx % ROOF2.length], st = o.data;
+  fRoomShell(c, m, accent);
+  const rug = m.rug; fRug(c, rug.x, rug.y, rug.w, rug.h, accent);
+  m.objs.forEach(ob => { if (ob.kind==="exit") fMat(c, ob.x, ob.y); });
+  m.objs.slice().sort((a,b) => (a.y+a.h)-(b.y+b.h)).forEach(ob => {
+    if (ob.kind==="frame"){ const w = st.week(ob.week), s = st.state(o.repo, ob.week); fFrame(c, ob.x, ob.y, s.cls ? (s.cls==="v2" ? "v2" : "v1") : (s.last ? "v1" : null), w && w.game, accent); }
+    if (ob.kind==="arcade") fArcade(c, ob.x, ob.y, ob.w, accent);
+    if (ob.kind==="desk") fDesk(c, ob.x, ob.y, ob.w);
+    if (ob.kind==="plant") fPlant(c, ob.x, ob.y);
+  });
+}
+
 function paintVillage(c, m, data){
   fGround(c, m); fPaths(c, m);
   for (let y=0;y<m.H;y++) for (let x=0;x<m.W;x++){ const t = m.tiles[y*m.W+x]; if (t==="flower") fFlower(c,x,y); if (t==="fence") fFence(c,x,y); }
@@ -281,19 +271,20 @@ function buildVillage(){
   return { W, H, tiles, solid, objs, start:{x:16, y:11, dir:0} };
 }
 function buildRoom(){
-  const W = 14, H = 11, tiles = [], solid = new Set(), objs = [];
+  /* 작업실: 가로 15칸 (가운데 = 7번 칸). 액자는 2~6주차 5개를 같은 간격으로 걸어요. */
+  const W = 15, H = 11, tiles = [], solid = new Set(), objs = [];
   for (let y=0;y<H;y++) for (let x=0;x<W;x++){
-    let t = "floor"; if (y<2) t = "iwall"+y; if (x===0||x===W-1) t = "side"; if (y===H-1) t = "side";
+    let t = "floor"; if (y<2) t = "wall"; if (x===0||x===W-1||y===H-1) t = "side";
     tiles[y*W+x] = t; if (t!=="floor") solid.add(x+","+y);
   }
-  // 문 (아래 가운데)
-  tiles[(H-1)*W+6] = "exit"; tiles[(H-1)*W+7] = "exit"; solid.delete("6,"+(H-1)); solid.delete("7,"+(H-1));
-  [1,3,5,8,10,12].forEach((fx, i) => objs.push({kind:"frame", week:i+1, x:fx, y:0, w:1, h:2, face:[fx,2]}));
-  objs.push({kind:"arcade", x:6, y:4, w:2, h:2});
-  objs.push({kind:"desk", x:5, y:7, w:4, h:1});
-  objs.push({kind:"plant", x:1, y:8, w:1, h:1}); objs.push({kind:"plant", x:12, y:8, w:1, h:1});
+  const DOOR = 7; tiles[(H-1)*W+DOOR] = "exit"; solid.delete(DOOR+","+(H-1));
+  [1,4,7,10,13].forEach((fx, i) => objs.push({kind:"frame", week:i+2, x:fx, y:0, w:1, h:2, face:[fx,2]}));
+  objs.push({kind:"arcade", x:6, y:4, w:3, h:2});
+  objs.push({kind:"desk", x:5, y:7, w:5, h:1});
+  objs.push({kind:"plant", x:1, y:8, w:1, h:1}); objs.push({kind:"plant", x:13, y:8, w:1, h:1});
   objs.forEach(o => { if (o.kind!=="frame") for (let y=o.y;y<o.y+o.h;y++) for (let x=o.x;x<o.x+o.w;x++) solid.add(x+","+y); });
-  return { W, H, tiles, solid, objs, start:{x:7, y:9, dir:3} };
+  objs.push({kind:"exit", x:DOOR, y:H-1, w:0, h:0});
+  return { W, H, tiles, solid, objs, rug:{x:4, y:3, w:7, h:4}, start:{x:DOOR, y:9, dir:3} };
 }
 
 /* ================= ENGINE ================= */
@@ -324,25 +315,9 @@ function start(canvas, opts){
 
 function paintBg(g){
   const m = g.map, o = g.opts, out = g.bg.getContext("2d");
-  if (o.scene === "village"){                       // 마을: 매끈한 일러스트
-    out.save(); out.scale(S*T/K, S*T/K); paintVillage(out, m, o.data); out.restore(); return;
-  }
-  const lowBg = document.createElement("canvas"); lowBg.width = m.W*T; lowBg.height = m.H*T;   // 집 안: 도트 그림
-  const c = lowBg.getContext("2d");
-  for (let y=0;y<m.H;y++) for (let x=0;x<m.W;x++){
-    const t = m.tiles[y*m.W+x];
-    if (t==="floor") drawFloor(c,x,y); else if (t==="iwall0") drawIWall(c,x,y,0); else if (t==="iwall1") drawIWall(c,x,y,1);
-    else if (t==="side") drawSide(c,x,y); else if (t==="exit") drawFloor(c,x,y);
-  }
-  drawRug(c, 4, 3, 6, 4); drawMat(c, 6, m.H-1);
-  const st = o.data;
-  m.objs.forEach(ob => {
-    if (ob.kind==="frame"){ const w = st.week(ob.week); const s = st.state(o.repo, ob.week); drawFrame(c, ob.x, ob.y, s.cls ? (s.cls==="v2"?"v2":"v1") : (s.last ? "v1" : null), w && w.game, ROOF[o.idx%ROOF.length]); }
-    if (ob.kind==="arcade") drawArcade(c, ob.x, ob.y, ROOF[o.idx%ROOF.length]);
-    if (ob.kind==="desk") drawDesk(c, ob.x, ob.y);
-    if (ob.kind==="plant") drawPlant(c, ob.x, ob.y);
-  });
-  out.imageSmoothingEnabled = false; out.drawImage(lowBg, 0, 0, g.bg.width, g.bg.height);
+  out.save(); out.scale(S*T/K, S*T/K);
+  if (o.scene === "village") paintVillage(out, m, o.data); else paintRoom(out, m, o);
+  out.restore();
 }
 
 const DIRS = { ArrowDown:0, KeyS:0, ArrowLeft:1, KeyA:1, ArrowRight:2, KeyD:2, ArrowUp:3, KeyW:3 };
@@ -470,16 +445,14 @@ function bfs(g, s, e){
 function draw(g, now){
   const c = g.ctx, p = g.p, fr = p.moving ? p.frame : 0;
   c.imageSmoothingEnabled = true; c.drawImage(g.bg, 0, 0);
+  c.save(); c.scale(S*T/K, S*T/K);
   if (g.opts.scene==="village"){
-    c.save(); c.scale(S*T/K, S*T/K);
     // 굴뚝 연기 (제출한 집)
     g.map.objs.forEach(o => { if (o.kind!=="house") return; const stu = g.opts.data.students[o.idx]; if (!stu || !g.opts.data.done(stu.repo)) return;
       for (let i=0;i<3;i++){ const k = ((now/1400) + i/3) % 1; circle(c, o.x*K + 5*K-42 + Math.sin(k*6+i)*4, o.y*K + 14 - k*26, 3 + k*5, `rgba(255,255,255,${.75*(1-k)})`); } });
-    fPlayer(c, p.fx*K/T, p.fy*K/T, p.dir, fr);
-    c.restore();
-  } else {
-    c.save(); c.scale(S, S); drawPlayer(c, p.fx, p.fy, p.dir, fr); c.restore();
   }
+  fPlayer(c, p.fx*K/T, p.fy*K/T, p.dir, fr);
+  c.restore();
   labels(g, c);
   if (g.dialog) drawDialog(g, c);
 }
@@ -499,10 +472,11 @@ function labels(g, c){
       if (o.kind==="board") tag(c, "📊 게시판", (o.x+1)*T*S, (o.y*T - 10)*S - 12, "rgba(255,255,255,.95)", "#2b2d4a", true);
     });
   } else {
-    g.map.objs.forEach(o => { if (o.kind==="frame") tag(c, `${o.week}주`, (o.x+.5)*T*S, (2*T - 1)*S - 8, "rgba(20,18,40,.75)", "#fff"); });
-    const a = g.map.objs.find(o => o.kind==="arcade"); tag(c, "🎮 게임기", (a.x+1)*T*S, (a.y*T - 2)*S - 12, "rgba(20,18,40,.82)", "#ffe27a");
-    const k = g.map.objs.find(o => o.kind==="desk"); tag(c, "✏️ 책상", (k.x+2)*T*S, ((k.y+1)*T + 1)*S, "rgba(20,18,40,.82)", "#fff");
-    tag(c, "🚪 마을로", 7*T*S, (g.map.H*T - 6)*S - 12, "rgba(20,18,40,.82)", "#fff");
+    const W = "rgba(255,255,255,.95)", D = "#2b2d4a";
+    g.map.objs.forEach(o => { if (o.kind==="frame") tag(c, `${o.week}주`, (o.x+.5)*T*S, (2*T - 5)*S - 10, W, D, true); });
+    const a = g.map.objs.find(o => o.kind==="arcade"); tag(c, "🎮 게임기", (a.x+a.w/2)*T*S, (a.y*T - 6)*S - 12, W, D, true);
+    const k = g.map.objs.find(o => o.kind==="desk"); tag(c, "✏️ 책상", (k.x+k.w/2)*T*S, ((k.y+1)*T + 3)*S, W, D, true);
+    const e = g.map.objs.find(o => o.kind==="exit"); tag(c, "🚪 마을로", (e.x+.5)*T*S, (g.map.H*T - 6)*S - 12, W, D, true);
   }
 }
 function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
