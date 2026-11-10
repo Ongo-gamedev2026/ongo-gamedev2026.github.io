@@ -964,6 +964,7 @@ function mountReview(){
    ④⑤⑥ Gemini에서 받은 게임 미리 해 보기 → ver1.html 내려받기 → play/index.html로 올리고 제출
    ⑦ 추가·수정·버그 요청 문장 만들기 ⑧ ver2 같은 방법으로 올리기
    ⑨ 대화에서 요청한 것을 Word로 받아 올리면 개발일지 3️⃣·4️⃣·💬·📌에 반영
+   ⑩ Gemini 역질문에 답한 뒤 Word로 정리해 올리면 개발일지 🙋 역질문 정리(없으면 새로 만듦)·📌에 반영
    GAME_WEEKS에 주차를 넣으면 그 주차 개발일지 작성 화면에 나와요. */
 const GAME_WEEKS = [4];
 const DEVLOG4 = "devlog/week04.md";
@@ -1208,6 +1209,104 @@ function runLog(text, msg, list){
   list.querySelector("[data-undo]").onclick = () => { W.segs = JSON.parse(G.undo); renderSegs(document.getElementById("wrDoc")); list.innerHTML = ""; msg.textContent = "되돌렸어요."; msg.className = "wr-status"; };
 }
 
+/* 10단계: Gemini 역질문 → Word 정리 → 개발일지 "🙋 Gemini 역질문 정리"에 반영 */
+const ASK_PROMPT = `이제 반대로 네가 나에게 질문해 줘. 지금까지 만든 내 게임(ver2)을 더 좋게 만들 수 있도록, 게임 기획자 선배처럼 질문해 줘.
+
+[질문 규칙]
+- 질문은 한 번에 하나씩만 하고, 내가 답하면 다음 질문으로 넘어가.
+- 모두 5개 질문해. (예: 이 게임에서 플레이어가 가장 재미있어야 하는 순간, 너무 쉽거나 어려운 부분, 처음 하는 친구가 헷갈릴 곳, 기획서와 달라진 점을 그대로 둘지, 다음 버전에서 가장 먼저 넣을 것)
+- 내가 잘 모르겠다고 하면 고를 수 있는 보기 2~3개를 줘.
+- 답을 대신 정해 주지 말고, 내 답이 짧으면 한 번 더 물어봐서 구체적으로 만들게 도와줘.
+- 5개를 다 묻고 나면 "질문 끝! 이제 정리 프롬프트를 보내 줘"라고 말해 줘.`;
+const QNA_PROMPT = `지금까지 우리가 나눈 대화 중에서, 네가 나에게 질문하고 내가 답한 "역질문" 부분을 처음부터 끝까지 살펴보고 아래 형식 그대로 Word 문서 파일로 정리해 줘. (파일을 만들 수 없으면 글로 보여 줘.)
+
+[규칙]
+- 네가 한 질문을 한 순서대로 하나도 빠뜨리지 말고 [질문] 줄로 써. 한 질문에 내가 여러 번 답했으면 한 줄로 합쳐.
+- "내 답"은 내가 한 말을 요약하되 내 생각이 바뀌지 않게 써. "그래서 정한 것"은 그 답으로 게임에서 바꾸거나 넣기로 한 것을 써. 정한 것이 없으면 "아직 없음"이라고 써.
+- 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 하나씩 써. 표로 만들지 마. 칸은 | 로 나눠.
+- 내가 하지 않은 답이나 정하지 않은 것은 지어내지 마.
+
+[게임 제목]
+[질문] 네가 한 질문 | 내 답(한두 문장) | 그래서 정한 것
+[새로 알게 된 점] 역질문에 답하면서 내 게임에 대해 새로 알게 된 점을 한두 문장으로
+[다음에 할 일] 역질문으로 정한 것 중 다음 버전에서 할 일 (하나마다 한 줄)`;
+const QNA_MD = `---
+
+## 🙋 Gemini 역질문 정리
+
+> Gemini가 나에게 던진 질문과 내 답을 정리해요. **🎮 → 10단계**에서 Word 파일을 올리면 자동으로 채워져요.
+
+| 🙋 Gemini의 질문 | ✍️ 내 답 | 💡 그래서 정한 것 |
+|---|---|---|
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+**🌱 역질문으로 새로 알게 된 점:**
+`;
+function parseQna(text){
+  const R = { title:"", qs:[], learn:"", next:[] }; let hit = 0;
+  const cells = v => { let c = v.split("|").map(x => x.trim()); if(c[0] === "") c.shift(); if(c[c.length-1] === "") c.pop(); return c; };
+  text.replace(/\r/g, "").split("\n").forEach(raw => {
+    const l = raw.replace(/\*\*/g, "").replace(/^[\s>*•·\-–]+/, "").trim(); if(!l) return;
+    const m = l.match(/^\[\s*([^\]]+?)\s*\]\s*[:：]?\s*(.*)$/);
+    if(!m){   // 표로 와도 읽어요 (머리줄·구분줄은 빼고)
+      if(!l.includes("|") || /^[\s:|-]+$/.test(l)) return;
+      const c = cells(l), isHead = /질문/.test(c[0]) && c[0].length <= 12 && /답/.test(c[1] || "");
+      if(c.length >= 2 && !isHead && !isBlank(c[0])){ R.qs.push([c[0], c[1] || "", c.slice(2).join(" | ")]); hit++; }
+      return;
+    }
+    const tag = m[1].replace(/\s/g, ""), val = m[2].trim(); hit++;
+    if(/^(역)?질문/.test(tag)){ const c = cells(val); if(!isBlank(c[0])) R.qs.push([c[0], c[1] || "", c.slice(2).join(" | ")]); }
+    else if(/제목/.test(tag)) R.title = val;
+    else if(/알게|배운/.test(tag)) R.learn = val;
+    else if(/다음/.test(tag)){ if(!isBlank(val)) R.next.push(val); }
+    else hit--;
+  });
+  return R.qs.length || R.learn ? R : null;
+}
+function mergeQna(R){
+  const log = [];
+  const head = firstTable(); if(head && head.rows[0] && setIfEmpty(head.rows[0][1], R.title)) log.push("➕ 내 게임 제목");
+  if(headAt(/역질문/) < 0){ insertSec(QNA_MD, [/다음 주/]); log.push("🆕 🙋 Gemini 역질문 정리 칸 만들기"); }
+  const t = segUnder(/역질문/, s => s.t === "table");
+  if(t){
+    const key = v => normName(v).slice(0, 24);
+    R.qs.forEach(q => {
+      if(t.rows.some(r => key(r[0].val || "") && key(r[0].val || "") === key(q[0]))) return;
+      let r = t.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); }
+      q.forEach((v, i) => { if(r[i] && !isBlank(v)){ r[i].val = v; r[i].hl = "new"; } });
+      log.push(`🆕 역질문: ${q[0].slice(0, 30)}${q[0].length > 30 ? "…" : ""}`);
+    });
+  }
+  if(!isBlank(R.learn)){
+    const a = segUnder(/역질문/, s => s.t === "ans");
+    if(a && !(a.val || "").trim()){ a.val = R.learn; log.push("➕ 역질문으로 새로 알게 된 점"); }
+  }
+  if(R.next.length){
+    const li = segUnder(/다음 주/, s => s.t === "list");
+    if(li){ const have = li.val.split("\n").map(x => x.trim()).filter(Boolean); const add = R.next.filter(x => !have.includes(x));
+      if(add.length){ li.val = have.concat(add).join("\n"); log.push(`➕ 다음 주에 할 일 ${add.length}개`); } }
+  }
+  return log;
+}
+function runQna(text, msg, list){
+  const R = parseQna(text);
+  if(!R){ msg.textContent = "정해진 형식([질문] 같은 줄)을 찾지 못했어요. 10단계 정리 프롬프트로 다시 받아 주세요."; msg.className = "wr-status err"; return; }
+  if(!onDevlog()){ msg.textContent = "개발일지를 아직 불러오지 못했어요. 잠시 뒤 다시 올려 주세요."; msg.className = "wr-status err"; return; }
+  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  G.qundo = JSON.stringify(W.segs);
+  const log = mergeQna(R);
+  renderSegs(document.getElementById("wrDoc"));
+  if(!log.length){ msg.textContent = "새로 채울 칸이 없어요. 이미 개발일지에 들어 있는 내용이에요."; msg.className = "wr-status"; list.innerHTML = ""; return; }
+  markDirty();
+  msg.textContent = `✅ ${log.length}곳을 채웠어요. 개발일지 🙋 Gemini 역질문 정리에서 확인하고 💾 저장하기를 눌러요.`; msg.className = "wr-status ok";
+  list.innerHTML = `<ul>${log.map(x => `<li>${esc(x)}</li>`).join("")}</ul><button class="btn" type="button" data-undo>↩️ 채우기 전으로 되돌리기</button>`;
+  list.querySelector("[data-undo]").onclick = () => { W.segs = JSON.parse(G.qundo); renderSegs(document.getElementById("wrDoc")); list.innerHTML = ""; msg.textContent = "되돌렸어요."; msg.className = "wr-status"; };
+}
+
 /* Gemini 답에서 HTML 코드만 꺼내요 (```html … ``` 로 와도 돼요) */
 function cleanCode(t){
   let s = String(t || "").replace(/\r\n/g, "\n").trim();
@@ -1275,7 +1374,7 @@ function gameBox(lite){
 function gameBoxFull(lite){
   const gem = `<a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>`;
   return `<section class="wr-ai" id="wrGame">
-    <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 목업 → 프롬프트 → ver1 → 수정 요청 → ver2 → Word 정리</span></div>
+    <div class="wr-ai-title">🎮 Gemini로 내 게임 만들기 <span>3주차 기획서 → 목업 → 프롬프트 → ver1 → 수정 요청 → ver2 → Word 정리 → 역질문</span></div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>3주차 게임 기획서 불러오기</div>
       <div class="btns"><button class="btn primary" type="button" data-gload>📥 3주차 기획서 불러오기</button></div>
       <p class="wr-status" data-msg></p>
@@ -1296,7 +1395,7 @@ function gameBoxFull(lite){
         <li>3단계에서 복사한 프롬프트를 붙여 넣고 보내요.</li>
       </ol>
     </div>
-    ${lite ? `<div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>게임 확인 · ver1·ver2 올리기 · 수정 요청 · Word 정리는 작성하기 화면에서 <span>5~9단계</span></div>
+    ${lite ? `<div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>게임 확인 · ver1·ver2 올리기 · 수정 요청 · Word 정리는 작성하기 화면에서 <span>5~10단계</span></div>
       <div class="btns"><a class="btn primary" href="#/write/${W.w.week}/${esc(W.st.repo)}/0">✏️ 작성하기에서 이어 하기</a></div></div>
   </section>` : ""}<!--LITE-END-->
     <div class="wr-ai-step"><div class="wr-ai-h"><i>5</i>만들어진 게임 확인하고 내려받기 <span>Canvas 미리 보기에서 먼저 해 봐요</span></div>
@@ -1323,7 +1422,21 @@ function gameBoxFull(lite){
       <div class="btns"><button class="btn primary" type="button" data-lfill>✍️ 붙여 넣은 글을 개발일지에 반영하기</button></div>
       <p class="wr-status" data-lmsg></p>
       <div class="wr-ai-log" data-llist></div>
-      <p class="hint">마지막으로 <b>💬 좋았던 이유 · 🤔 비교 소감</b>은 내 말로 쓰고 💾 저장 → 📮 제출해요.</p>
+      <p class="hint"><b>💬 좋았던 이유 · 🤔 비교 소감</b>은 내 말로 써요.</p>
+    </div>
+    <div class="wr-ai-step" data-qna-area><div class="wr-ai-h"><i>10</i>Gemini의 역질문에 답하고 Word로 정리하기 <span>같은 채팅에서 이어 가요</span></div>
+      <p class="hint">이번엔 Gemini가 나에게 질문해요. 아래 <b>역질문 시작 프롬프트</b>를 같은 채팅에 보내고, 질문에 하나씩 내 생각으로 답해요. 질문이 끝나면 <b>정리 프롬프트</b>를 보내 Word 파일로 받아요.</p>
+      <details class="wr-ai-peek"><summary>역질문 시작 프롬프트 보기</summary><pre class="wr-ai-out">${esc(ASK_PROMPT)}</pre></details>
+      <details class="wr-ai-peek"><summary>정리 프롬프트 보기</summary><pre class="wr-ai-out">${esc(QNA_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-askp>📋 ① 역질문 시작 프롬프트 복사</button><button class="btn" type="button" data-qnap>📋 ② 역질문 정리 Word 요청 프롬프트 복사</button></div>
+      <p class="hint">Gemini가 Word 파일을 바로 주지 않으면 <b>Google Docs로 내보내기 → 파일 → 다운로드 → Microsoft Word(.docx)</b>로 받거나, 글로 보여 준 답을 복사해 아래 칸에 붙여 넣어요. 개발일지 <b>🙋 Gemini 역질문 정리 · 📌 다음 주에 할 일</b>에 채워져요.</p>
+      <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-qfile hidden>📄 Word 파일 올리기 (.docx)</label><span data-qname class="hint" style="margin:0"></span></div>
+      <div class="wr-ai-or">또는 <b>Gemini가 글로 정리해 준 답</b>을 복사해서 붙여 넣어요</div>
+      <textarea class="wr-in wr-ai-paste" rows="5" data-qpaste placeholder="[게임 제목] ... [질문] ... 처럼 시작하는 Gemini 답을 통째로 복사해 붙여 넣어요"></textarea>
+      <div class="btns"><button class="btn primary" type="button" data-qfill>✍️ 붙여 넣은 글을 개발일지에 반영하기</button></div>
+      <p class="wr-status" data-qmsg></p>
+      <div class="wr-ai-log" data-qlist></div>
+      <p class="hint">마지막으로 내용을 확인하고 💾 저장 → 📮 제출해요.</p>
     </div>
   </section>`;
 }
@@ -1381,6 +1494,19 @@ function mountGame(){
     runLog(lpaste.value, lmsg, llist);
   };
   box.querySelector("[data-lfill]").onclick = () => runLog(lpaste.value, lmsg, llist);
+
+  /* 10단계 역질문 → Word 정리 */
+  box.querySelector("[data-askp]").onclick = e => copyText(ASK_PROMPT, e.currentTarget);
+  box.querySelector("[data-qnap]").onclick = e => copyText(QNA_PROMPT, e.currentTarget);
+  const qmsg = box.querySelector("[data-qmsg]"), qlist = box.querySelector("[data-qlist]"), qpaste = box.querySelector("[data-qpaste]");
+  box.querySelector("[data-qfile]").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return; e.target.value = "";
+    box.querySelector("[data-qname]").textContent = "📄 " + f.name;
+    try{ qpaste.value = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : await f.text(); }
+    catch(_){ qmsg.textContent = "파일을 읽지 못했어요. Word(.docx) 파일인지 확인하거나, 아래 '붙여 넣기'를 이용해 주세요."; qmsg.className = "wr-status err"; return; }
+    runQna(qpaste.value, qmsg, qlist);
+  };
+  box.querySelector("[data-qfill]").onclick = () => runQna(qpaste.value, qmsg, qlist);
 }
 
 /* ---------- 🚀 5주차 내 게임 완성하고 올리기 ----------
