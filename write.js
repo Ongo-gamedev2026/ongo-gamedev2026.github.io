@@ -8,14 +8,34 @@ const W = { segs:[], dirty:false, sha:null, st:null, w:null, doc:null, busy:fals
 
 /* ---------- 열쇠(토큰) ---------- */
 const keyName = repo => "ghkey:" + repo;
-function getKey(repo){
+function stuKey(repo){
   try{ return sessionStorage.getItem(keyName(repo)) || localStorage.getItem(keyName(repo)) || ""; }catch(_){ return ""; }
 }
+/* 👩‍🏫 선생님 열쇠: 모든 학생 저장소에 쓸 수 있는 토큰. 학생 열쇠가 없을 때 대신 써요. */
+const T_KEY = "ghkey:__teacher";
+function teacherKey(){ try{ return sessionStorage.getItem(T_KEY) || localStorage.getItem(T_KEY) || ""; }catch(_){ return ""; } }
+const isTeacher = () => !!teacherKey();
+function getKey(repo){ return stuKey(repo) || teacherKey(); }
 function setKey(repo, k, remember){
   try{ sessionStorage.setItem(keyName(repo), k); if(remember) localStorage.setItem(keyName(repo), k); }catch(_){}
 }
 function clearKey(repo){
-  try{ sessionStorage.removeItem(keyName(repo)); localStorage.removeItem(keyName(repo)); }catch(_){}
+  try{
+    if(!stuKey(repo)){ sessionStorage.removeItem(T_KEY); localStorage.removeItem(T_KEY); }   // 선생님 열쇠로 들어와 있었으면 그것을 빼요
+    sessionStorage.removeItem(keyName(repo)); localStorage.removeItem(keyName(repo));
+  }catch(_){}
+}
+async function connectTeacher(input, remember){
+  const k = input.trim(); if(!/^github_pat_|^ghp_/.test(k)) throw new Error("GitHub 토큰(github_pat_… 또는 ghp_…)을 넣어 주세요.");
+  const repos = S.students.slice(0, 2).map(x => x.repo);
+  for(const repo of repos){
+    let r; try{ r = await fetch(`${API}/repos/${S.cfg.org}/${repo}`, { headers:{ Authorization:"Bearer " + k, Accept:"application/vnd.github+json" }, cache:"no-store" }); }
+    catch(_){ throw new Error("확인하지 못했어요. 인터넷 연결을 확인해 주세요."); }
+    if(r.status === 401) throw new Error("토큰이 맞지 않거나 기간이 끝났어요.");
+    if(!r.ok) throw new Error(`이 토큰으로는 ${repo} 저장소에 들어갈 수 없어요. 모든 학생 저장소 권한이 있는 토큰인지 확인해 주세요.`);
+    const j = await r.json(); if(j.permissions && !j.permissions.push) throw new Error("이 토큰에는 쓰기 권한이 없어요. Contents 읽기·쓰기 권한을 주세요.");
+  }
+  try{ sessionStorage.setItem(T_KEY, k); if(remember) localStorage.setItem(T_KEY, k); }catch(_){}
 }
 /* 학생 코드(XXXX-XXXX)로 keys.json의 잠긴 열쇠를 풀어요 */
 const b64bytes = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
@@ -107,6 +127,10 @@ function isFree(l){
 }
 const freeText = l => unescLead(l.replace(/^[-*] ?/, "").replace(/^\[[ xX]\] ?/, "")).trim();
 
+/* 💬 선생님 코멘트: "> 💬 **선생님 코멘트** (11/10): 내용" 줄로 문서 안에 저장해요 */
+const RE_CMT = /^>\s*💬\s*\*\*선생님 코멘트\*\*\s*(?:\(([^)]*)\))?\s*[:：]?\s*(.*)$/;
+const CMT_WEEKS = [3];          // 선생님 모드에서 코멘트 달기 버튼이 나오는 주차
+const RE_SEC = /^(##\s|###\s+\d-\d)/;   // 코멘트를 달 수 있는 칸 제목
 function parseMd(md){
   const L = md.replace(/\r\n/g, "\n").split("\n");
   const segs = []; let raw = [];
@@ -114,6 +138,12 @@ function parseMd(md){
   let i = 0;
   while(i < L.length){
     const l = L[i]; let m;
+    if((m = l.match(RE_CMT))){
+      const vals = [m[2]]; let j = i + 1;
+      while(j < L.length && /^>/.test(L[j]) && !RE_CMT.test(L[j])){ vals.push(L[j].replace(/^>\s?/, "")); j++; }
+      flush(); segs.push({ t:"cmt", date:m[1] || "", val: vals.map(v => v.replace(/\s+$/, "")).join("\n").trim() });
+      i = j; continue;
+    }
     if(/^```/.test(l)){
       let j = i + 1; while(j < L.length && !/^```\s*$/.test(L[j])) j++;
       const body = L.slice(i + 1, j).join("\n");
@@ -144,8 +174,15 @@ function parseMd(md){
 
 /* ---------- 조각 → md ---------- */
 function toMd(){
-  const out = [];
+  const out = []; let gap = false;
   for(const s of W.segs){
+    if(gap){ const first = s.t === "raw" ? (s.lines[0] || "") : "x"; if(first.trim() && s.t !== "cmt") out.push(""); gap = false; }
+    if(s.t === "cmt"){
+      const lines = s.val.split("\n").map(x => x.trim()).filter(Boolean); if(!lines.length) continue;
+      if(out.length && out[out.length - 1].trim()) out.push("");   // 빈 줄로 띄워야 다른 인용문과 합쳐지지 않아요
+      lines.forEach((x, k) => out.push((k ? "> " : `> 💬 **선생님 코멘트**${s.date ? ` (${s.date})` : ""}: `) + x + (k < lines.length - 1 ? "  " : "")));
+      gap = true; continue;
+    }
     if(s.t === "raw") out.push(...s.lines);
     else if(s.t === "code") out.push(s.open, (s.val.replace(/\s+$/, "") || s.ph), s.close);
     else if(s.t === "table"){
@@ -178,9 +215,49 @@ function ta(val, ph, cls, onIn){
   return el;
 }
 
+const cmtDate = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const canComment = () => isTeacher() && W.w && CMT_WEEKS.includes(W.w.week);
+/* 칸 제목(## …, ### 5-1 …) 앞에서 raw 조각을 나눠, 코멘트를 칸 끝에 넣을 수 있게 해요 (md 내용은 그대로) */
+function splitSections(){
+  const out = [];
+  W.segs.forEach(s => {
+    if(s.t !== "raw"){ out.push(s); return; }
+    let cur = [];
+    s.lines.forEach((l, k) => {
+      if(RE_SEC.test(l) && cur.length){
+        let c = cur.length; while(c > 0 && (!cur[c - 1].trim() || /^---\s*$/.test(cur[c - 1]))) c--;   // 칸 사이의 빈 줄·구분선은 다음 칸 쪽으로
+        if(c > 0){ out.push({ t:"raw", lines:cur.slice(0, c) }); cur = cur.slice(c); }
+      }
+      cur.push(l);
+    });
+    if(cur.length) out.push({ t:"raw", lines:cur });
+  });
+  W.segs = out;
+}
+function cmtButton(box, at, first){
+  const b = document.createElement("button"); b.type = "button"; b.className = "wr-cmt-add";
+  b.textContent = first ? "💬 전체 코멘트 달기" : "💬 위 칸에 코멘트 달기";
+  b.onclick = () => { W.segs.splice(at, 0, { t:"cmt", date:cmtDate(), val:"", fresh:true }); renderSegs(box); markDirty();
+    const f = box.querySelector(".wr-cmt.fresh textarea"); if(f){ f.focus(); f.closest(".wr-cmt").classList.remove("fresh"); } };
+  box.appendChild(b);
+}
 function renderSegs(box){
   box.innerHTML = "";
-  W.segs.forEach(s => {
+  const tc = canComment(); let firstSec = true;
+  if(tc) splitSections();
+  W.segs.forEach((s, idx) => {
+    if(tc && s.t === "raw" && RE_SEC.test(s.lines.find(l => l.trim() && !/^---\s*$/.test(l)) || "")){ cmtButton(box, idx, firstSec); firstSec = false; }
+    if(s.t === "cmt"){
+      const d = document.createElement("div"); d.className = "wr-cmt" + (s.fresh ? " fresh" : ""); delete s.fresh;
+      d.innerHTML = `<div class="wr-cmt-h">💬 선생님 코멘트${s.date ? ` <span>${esc(s.date)}</span>` : ""}</div>`;
+      if(isTeacher()){
+        d.appendChild(ta(s.val, "학생에게 남길 코멘트를 적어요", "wr-in", v => s.val = v));
+        const del = document.createElement("button"); del.type = "button"; del.className = "wr-cmt-del"; del.textContent = "🗑 지우기";
+        del.onclick = () => { W.segs.splice(W.segs.indexOf(s), 1); renderSegs(box); markDirty(); };
+        d.appendChild(del);
+      }else d.insertAdjacentHTML("beforeend", `<div class="md">${mdHtml(s.val)}</div>`);
+      box.appendChild(d); return;
+    }
     if(s.t === "raw"){
       const d = document.createElement("div"); d.className = "md wr-raw"; d.innerHTML = mdHtml(s.lines.join("\n"));
       d.querySelectorAll("p").forEach(p => { if(/^예\s*[:：)]/.test(p.textContent.trim())) p.classList.add("ex"); });
@@ -246,6 +323,7 @@ function renderSegs(box){
       box.appendChild(wrap);
     }
   });
+  if(tc) cmtButton(box, W.segs.length, false);
   addTips(box);
 }
 
@@ -348,7 +426,8 @@ async function save(quiet){
       const g = await gh(`${repoPath()}/contents/${encodeURI(W.doc.path)}?ref=main`);
       if(g.ok) W.sha = (await g.json()).sha;
     }
-    const body = { message:`${W.w.week}주차 ${W.doc.name} 저장 (사이트에서)`, content:b64enc(toMd()), branch:"main" };
+    const who = !stuKey(W.st.repo) && isTeacher() ? "선생님 코멘트·수정" : "저장";
+    const body = { message:`${W.w.week}주차 ${W.doc.name} ${who} (사이트에서)`, content:b64enc(toMd()), branch:"main" };
     if(W.sha) body.sha = W.sha;
     const r = await gh(`${repoPath()}/contents/${encodeURI(W.doc.path)}`, { method:"PUT", body:JSON.stringify(body), headers:{ "Content-Type":"application/json" } });
     if(r.status === 409 || r.status === 422){ setStatus("다른 곳에서 이 문서가 바뀌었어요. 내 내용을 복사해 두고 새로고침해 주세요.", "err"); return false; }
@@ -409,6 +488,15 @@ async function openSubmit(){
 function drawKey(notice){
   const el = document.getElementById("wrKey"); if(!el) return;
   const k = getKey(W.st.repo);
+  if(k && !stuKey(W.st.repo)){
+    el.className = "wr-key on teacher";
+    el.innerHTML = `<span>👩‍🏫 <b>선생님 모드</b> · ${esc(label(W.st))} 저장소에 바로 저장돼요. 칸을 고치거나${CMT_WEEKS.includes(W.w.week) ? " <b>💬 코멘트 달기</b>로 코멘트를 남긴 뒤" : ""} 💾 저장하기를 눌러요.</span>
+      <button class="btn" data-out>선생님 모드 끄기</button>`;
+    el.querySelector("[data-out]").onclick = () => { if(W.dirty && !confirm("저장하지 않은 내용이 있어요. 그래도 끌까요?")) return;
+      try{ sessionStorage.removeItem(T_KEY); localStorage.removeItem(T_KEY); }catch(_){} drawKey("선생님 모드를 껐어요."); load(); };
+    if(notice) el.insertAdjacentHTML("beforeend", `<p class="hint">${esc(notice)}</p>`);
+    return;
+  }
   if(k){
     el.className = "wr-key on";
     el.innerHTML = `<span>🔑 열쇠가 연결되어 있어요. 저장하면 내 저장소(${esc(W.st.repo)})에 바로 기록돼요.</span>
@@ -423,7 +511,20 @@ function drawKey(notice){
     <div class="wr-key-row"><input type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-1234" aria-label="내 코드">
     <button class="btn primary" data-ok>확인</button></div>
     <label class="wr-remember"><input type="checkbox"> 이 컴퓨터에 기억하기 (내 컴퓨터일 때만 체크)</label>
-    <p class="wr-status" data-msg>${esc(notice || "")}</p>`;
+    <p class="wr-status" data-msg>${esc(notice || "")}</p>
+    <details class="wr-teacher"><summary>👩‍🏫 선생님이신가요?</summary>
+      <p class="hint">모든 학생 저장소에 쓸 수 있는 <b>선생님 GitHub 토큰</b>을 넣으면, 학생 코드 없이 내용을 고치고 코멘트를 달 수 있어요.</p>
+      <div class="wr-key-row"><input type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="선생님 토큰" data-t>
+      <button class="btn primary" data-tok>선생님 모드 켜기</button></div>
+      <label class="wr-remember"><input type="checkbox" data-trem> 이 컴퓨터에 기억하기 (선생님 컴퓨터일 때만)</label>
+      <p class="wr-status" data-tmsg></p></details>`;
+  const tin = el.querySelector("[data-t]"), tmsg = el.querySelector("[data-tmsg]");
+  const tgo = async () => {
+    if(!tin.value.trim()) return; tmsg.textContent = "토큰을 확인하는 중…"; tmsg.className = "wr-status";
+    try{ await connectTeacher(tin.value, el.querySelector("[data-trem]").checked); drawKey(); if(!W.dirty) load(); else { setStatus("선생님 모드를 켰어요", "ok"); renderSegs(document.getElementById("wrDoc")); } }
+    catch(e){ tmsg.textContent = e.message; tmsg.className = "wr-status err"; }
+  };
+  el.querySelector("[data-tok]").onclick = tgo; tin.onkeydown = e => { if(e.key === "Enter") tgo(); };
   const inp = el.querySelector("input"), msg = el.querySelector("[data-msg]");
   const go = async () => {
     if(!inp.value.trim()) return;

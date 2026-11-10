@@ -178,6 +178,18 @@ td.in.hl-chg .wr-cell,td.in.hl-new .wr-cell{background:transparent}
 textarea.wr-ai-paste.mono{max-height:220px;overflow:auto!important}
 .wr-ai-or{font-size:13.5px;color:var(--sub);margin:10px 0 6px}
 .wr-ai-follow{margin-top:14px;font-size:14px}
+.md blockquote.t-cmt{background:#eef4ff;color:#1e3a8a;border-left:4px solid #3b6fe0}
+.wr-cmt{background:#eef4ff;border-left:4px solid #3b6fe0;border-radius:10px;padding:10px 14px;margin:10px 0 14px}
+.wr-cmt-h{font-weight:700;font-size:13.5px;color:#1e3a8a;margin-bottom:6px}
+.wr-cmt-h span{font-weight:400;color:#5b6b95;margin-left:6px}
+.wr-cmt .wr-in{background:#fff}
+.wr-cmt .md{color:#1e3a8a}
+.wr-cmt-del{border:0;background:none;color:#8a94b5;font-size:12.5px;cursor:pointer;margin-top:4px}
+.wr-cmt-add{display:block;margin:6px 0 10px auto;border:1px dashed #9db5ef;background:#f7f9ff;color:#2f55b8;border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer}
+.wr-cmt-add:hover{background:#eef4ff}
+.wr-key.on.teacher{background:#eef4ff;border-color:#c7d6fb}
+.wr-teacher{margin-top:10px;font-size:13.5px}
+.wr-teacher summary{cursor:pointer;color:var(--sub)}
 .wr-key{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px}
 .wr-key.on{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px;background:var(--ok-bg);border-color:#bfe5cc;font-size:14px}
 .wr-key.on span{flex:1;min-width:200px}
@@ -606,7 +618,7 @@ function renderMd(text, base){
     if(/^예\s*[:：)]/.test(t)) p.classList.add("ex");
     if(/^답\s*[:：]/.test(t)) p.classList.add("ans");
   });
-  box.querySelectorAll("blockquote").forEach(b => { if(/작성 방법|Commit changes/.test(b.textContent)) b.classList.add("howto"); });
+  box.querySelectorAll("blockquote").forEach(b => { if(/작성 방법|Commit changes/.test(b.textContent)) b.classList.add("howto"); if(/^\s*💬\s*선생님 코멘트/.test(b.textContent)) b.classList.add("t-cmt"); });
   box.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; });
   return box.innerHTML;
 }
