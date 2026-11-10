@@ -1868,7 +1868,7 @@ function mergeReviews(R){
   const log = [];
   const t6 = segUnder(/친구들이 남긴/, s => s.t === "table");
   if(t6) R.got.forEach(g => {
-    const who = Reviews.who(g.from), key = normName(g.good).slice(0, 20);
+    const who = g.name || Reviews.who(g.from), key = normName(g.good).slice(0, 20);
     if(t6.rows.some(r => normName(cellV(r[2])).slice(0, 20) === key && key)) return;
     let r = t6.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = t6.head.map(() => ({ ro:false, ph:"", val:"" })); t6.rows.push(r); }
     [who, g.stars ? "⭐" + g.stars : "", g.good, g.idea || ""].forEach((v, i) => { if(r[i] && !r[i].ro && v){ r[i].val = v; r[i].hl = "new"; } });
@@ -1961,7 +1961,7 @@ function finalBox(lite, st){
       </div>
     </div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>7</i>친구 게임 플레이하고 소감 남기기 <span>3명 이상</span></div>
-      <p class="hint">친구 게임을 끝까지 해 보고, 게임 페이지 맨 아래 <b>💬 플레이 소감</b>에 별점 · 👍 좋았던 점 · 💡 제안을 남겨요. 내 게임에 달린 소감에는 <b>답글</b>을 달아요. 소감은 <b>구체적으로</b>: "재밌어요" 대신 "어떤 순간이 왜 재밌었는지".</p>
+      <p class="hint">친구 게임을 끝까지 해 보고, 게임 페이지 맨 아래 <b>💬 플레이 소감</b>에 내 게임 번호 · 학번 · 이름 · ⭐ 별점 · 👍 재미있던 요소 · 💡 추가되면 좋을 요소를 남겨요. (열쇠는 필요 없어요) 소감은 <b>구체적으로</b>: "재밌어요" 대신 "어떤 순간이 왜 재밌었는지".</p>
       <div class="btns"><button class="btn" type="button" data-vload>🔄 친구 게임 목록 · 소감 현황 보기</button><button class="btn primary" type="button" data-vfill>📥 받은 소감 · 내가 남긴 소감 불러오기</button><a class="btn" href="${hubUrl(st)}versions.html#reviews" target="_blank" rel="noopener">🎮 내 게임 페이지</a></div>
       <p class="wr-status" data-vmsg></p>
       <div data-vlist></div>
