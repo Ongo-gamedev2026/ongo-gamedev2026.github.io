@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-11T05:54:23.055Z",
+  "updated": "2026-11-11T14:00:09.748Z",
   "records": [
     {
       "repo": "game-01",
@@ -132,6 +132,36 @@
       "recorded_at": "2026-11-10T17:39:12.519Z"
     },
     {
+      "repo": "game-05",
+      "tag": "week4-v1",
+      "week": 4,
+      "version": 1,
+      "published_at": "2026-11-11T06:55:04Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week4-v1",
+      "notes": "## 🛠 패치노트 · 게임 ver2\n- 바뀐 점: 상점 아이템 추가, 점프바 중간에 있는 선 랜덤 배치\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-11T14:00:08.380Z"
+    },
+    {
+      "repo": "game-05",
+      "tag": "week4-v2",
+      "week": 4,
+      "version": 2,
+      "published_at": "2026-11-11T07:19:11Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week4-v2",
+      "notes": "## 🛠 패치노트 · 게임 ver2\n- 바뀐 점: 상점 아이템 추가, 점프바 중간에 있는 선 랜덤 배치\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-11T14:00:08.380Z"
+    },
+    {
+      "repo": "game-05",
+      "tag": "week4-v3",
+      "week": 4,
+      "version": 3,
+      "published_at": "2026-11-11T07:19:16Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-05/releases/tag/week4-v3",
+      "notes": "## 🛠 패치노트 · 게임 ver1\n- 바뀐 점: 왼쪽 위 높이 표시, 점선으로 포물선 표시\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-11T14:00:08.379Z"
+    },
+    {
       "repo": "game-07",
       "tag": "week2-v1",
       "week": 2,
@@ -180,6 +210,16 @@
       "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week3-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
       "recorded_at": "2026-11-04T21:14:05.385Z"
+    },
+    {
+      "repo": "game-08",
+      "tag": "week4-v1",
+      "week": 4,
+      "version": 1,
+      "published_at": "2026-11-11T06:12:38Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week4-v1",
+      "notes": "## 🛠 패치노트 · 게임 ver1\n- 바뀐 점: 3주차 기획서와 목업으로 Gemini가 처음 만든 스테이지 1 게임\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-11T14:00:09.743Z"
     }
   ]
 }
