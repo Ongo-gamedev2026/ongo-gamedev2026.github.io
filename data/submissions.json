@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-11T14:00:09.748Z",
+  "updated": "2026-11-16T20:16:23.176Z",
   "records": [
     {
       "repo": "game-01",
@@ -30,6 +30,46 @@
       "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week3-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
       "recorded_at": "2026-11-09T18:39:33.101Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week4-v1",
+      "week": 4,
+      "version": 1,
+      "published_at": "2026-11-16T12:23:30Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week4-v1",
+      "notes": "## 🛠 패치노트 · 게임 ver2\n- 바뀐 점: 랭킹판,피버타임,빠른 서빙 보너스 팁,귀여운 효과음\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-16T20:16:20.745Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week4-v2",
+      "week": 4,
+      "version": 2,
+      "published_at": "2026-11-16T12:24:28Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week4-v2",
+      "notes": "## 🛠 패치노트 · 게임 ver1\n- 바뀐 점: 3주차 기획서와 목업으로 Gemini가 처음 만든 스테이지 1 게임\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-16T20:16:20.745Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week4-v3",
+      "week": 4,
+      "version": 3,
+      "published_at": "2026-11-16T12:33:44Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week4-v3",
+      "notes": "## 🛠 패치노트 · 게임 ver1\n- 바뀐 점: 3주차 기획서와 목업으로 Gemini가 처음 만든 스테이지 1 게임\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-16T20:16:20.745Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week4-v4",
+      "week": 4,
+      "version": 4,
+      "published_at": "2026-11-16T12:34:26Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week4-v4",
+      "notes": "## 🛠 패치노트\n- 바뀐 점: \n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-16T20:16:20.744Z"
     },
     {
       "repo": "game-02",
