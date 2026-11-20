@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-19T21:21:06.982Z",
+  "updated": "2026-11-20T11:17:22.893Z",
   "records": [
     {
       "repo": "game-01",
@@ -120,6 +120,16 @@
       "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week3-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
       "recorded_at": "2026-11-09T18:39:33.742Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week4-v1",
+      "week": 4,
+      "version": 1,
+      "published_at": "2026-11-20T10:58:38Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week4-v1",
+      "notes": "## 🛠 패치노트\n- 바뀐 점: \n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-20T11:17:21.317Z"
     },
     {
       "repo": "game-04",
@@ -300,6 +310,16 @@
       "url": "https://github.com/Ongo-gamedev2026/game-07/releases/tag/week4-v4",
       "notes": "## 🛠 패치노트 · 게임 ver2\n- 바뀐 점: 맵 곳곳에 장애물을 추가함.\n마법서가 있는 방의 위치와 나오는 주기가 불규칙 적으로 바꿈.\n더이상 마법서가 있는 방이 방 클리어 수를 늘리지 않음.\n스테이지 형식을 N-n 형식으로 변경.\n몬스터 수 3 -> 7\n단계 넘어갈 때 마다 맵의 배경 변\n- 고친 버그: \n- 다음 버전에서 할 일: ",
       "recorded_at": "2026-11-19T21:21:06.769Z"
+    },
+    {
+      "repo": "game-07",
+      "tag": "week4-v5",
+      "week": 4,
+      "version": 5,
+      "published_at": "2026-11-20T04:51:27Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-07/releases/tag/week4-v5",
+      "notes": "## 🛠 패치노트\n- 바뀐 점: \n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-20T11:17:22.577Z"
     },
     {
       "repo": "game-08",
