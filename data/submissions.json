@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-20T11:17:22.893Z",
+  "updated": "2026-11-20T19:57:24.074Z",
   "records": [
     {
       "repo": "game-01",
@@ -350,6 +350,26 @@
       "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week4-v1",
       "notes": "## 🛠 패치노트 · 게임 ver1\n- 바뀐 점: 3주차 기획서와 목업으로 Gemini가 처음 만든 스테이지 1 게임\n- 고친 버그: \n- 다음 버전에서 할 일: ",
       "recorded_at": "2026-11-11T14:00:09.743Z"
+    },
+    {
+      "repo": "game-08",
+      "tag": "week4-v2",
+      "week": 4,
+      "version": 2,
+      "published_at": "2026-11-20T12:35:59Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week4-v2",
+      "notes": "## 🛠 패치노트 · 게임 ver2\n- 바뀐 점: 맵의 길이, 유물 추가, 밸런스 패치, 적의 종류 추가, 전리품 추가, 카드의 종류 추가, 편의성 기능 추가, 정예전투 추가, 이벤트 종류 추가\n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-20T19:57:24.069Z"
+    },
+    {
+      "repo": "game-08",
+      "tag": "week4-v3",
+      "week": 4,
+      "version": 3,
+      "published_at": "2026-11-20T13:15:04Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week4-v3",
+      "notes": "## 🛠 패치노트\n- 바뀐 점: \n- 고친 버그: \n- 다음 버전에서 할 일: ",
+      "recorded_at": "2026-11-20T19:57:24.068Z"
     }
   ]
 }
