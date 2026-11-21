@@ -1653,13 +1653,7 @@ function prefillFixes(){
   const t = fixTable(); if(!t) return 0;
   const have = new Set(t.rows.map(r => normName(cellV(r[1])).slice(0, 20)).filter(Boolean));
   let n = 0;
-  const ft = segUnder(/피드백 반영/, s => s.t === "table");       // 🧑‍🏫 4주차 피드백 반영 표에 번호·피드백 넣기
-  if(ft) F5.fb.forEach(([no, v]) => {
-    const key = normName(v).slice(0, 20); if(ft.rows.some(r => normName(cellV(r[1])).slice(0, 20) === key)) return;
-    let r = ft.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = ft.head.map(() => ({ ro:false, ph:"", val:"" })); ft.rows.push(r); }
-    if(r[0] && !r[0].ro){ r[0].val = no; r[0].hl = "new"; } if(r[1] && !r[1].ro){ r[1].val = v; r[1].hl = "new"; } F5.fbn = (F5.fbn || 0) + 1;
-  });
-  F5.fb.map(([no, v]) => ["수정", `[피드백 ${no}] ${v}`]).concat(F5.left, F5.next).forEach(([k, v]) => {
+  F5.left.concat(F5.next).forEach(([k, v]) => {
     const key = normName(v).slice(0, 20); if(!key || have.has(key)) return; have.add(key);
     let r = t.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); }
     if(k){ r[0].val = k; r[0].hl = "new"; } r[1].val = v; r[1].hl = "new"; n++;
@@ -1667,6 +1661,39 @@ function prefillFixes(){
   const head = firstTable(); if(head && head.rows[0]) setIfEmpty(head.rows[0][0], today());
   if(n){ renderSegs(document.getElementById("wrDoc")); markDirty(); }
   return n;
+}
+/* 🧑‍🏫 4주차 피드백 불러오기: 4주차 개발일지 맨 아래 멘토 피드백(🛠 고칠 점 · 💡 제안)을
+   5주차 🧑‍🏫 4주차 피드백 반영 표와 2️⃣ 보완 목록 맨 위에 넣어요 (이미 있는 것은 건너뛰어요) */
+async function loadFeedback(box){
+  const m = box.querySelector("[data-fbmsg]"), out = box.querySelector("[data-fblist]");
+  if(!onDevlog5()){ m.textContent = "개발일지를 아직 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; m.className = "wr-status err"; return; }
+  m.textContent = "4주차 피드백을 불러오는 중…"; m.className = "wr-status";
+  let w4 = null; try{ w4 = await fetchDoc(DEVLOG4); }catch(_){}
+  const fb = w4 ? readWeek4(w4).fb : []; F5.fb = fb;
+  if(!fb.length){ m.textContent = "아직 선생님 피드백이 없어요. 피드백이 올라오면 다시 눌러 주세요."; m.className = "wr-status warn"; out.innerHTML = ""; return; }
+  out.innerHTML = `<ul class="wr-ai-steps">${fb.map(x => `<li>${esc(x[2])} <b>${esc(x[0])}</b> ${esc(x[1])}</li>`).join("")}</ul>`;
+  W.segs.forEach(s => { delete s.hl; if(s.rows) s.rows.forEach(r => r.forEach(c => delete c.hl)); });
+  let a = 0, b = 0;
+  const ft = segUnder(/피드백 반영/, s => s.t === "table");
+  if(ft) fb.forEach(([no, v]) => {
+    const key = normName(v).slice(0, 20); if(ft.rows.some(r => normName(cellV(r[1])).slice(0, 20) === key)) return;
+    let r = ft.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = ft.head.map(() => ({ ro:false, ph:"", val:"" })); ft.rows.push(r); }
+    if(r[0] && !r[0].ro){ r[0].val = no; r[0].hl = "new"; } if(r[1] && !r[1].ro){ r[1].val = v; r[1].hl = "new"; } a++;
+  });
+  const t = fixTable();
+  if(t){
+    const have = new Set(t.rows.map(r => normName(cellV(r[1])).slice(0, 20)).filter(Boolean)), add = [];
+    fb.forEach(([no, v]) => { const txt = `[피드백 ${no}] ${v}`, key = normName(txt).slice(0, 20); if(have.has(key)) return; have.add(key);
+      const r = t.head.map(() => ({ ro:false, ph:"", val:"" })); r[0].val = "수정"; r[1].val = txt; r[0].hl = r[1].hl = "new"; add.push(r); });
+    if(add.length){                     // 맨 위에 넣고, 그만큼 맨 아래 빈 줄을 줄여요
+      t.rows.unshift(...add); b = add.length;
+      for(let k = 0; k < add.length; k++){ const i = t.rows.length - 1; if(i >= add.length && t.rows[i].every(c => c.ro || !(c.val || "").trim())) t.rows.splice(i, 1); }
+    }
+  }
+  const head = firstTable(); if(head && head.rows[0]) setIfEmpty(head.rows[0][0], today());
+  if(a || b){ renderSegs(document.getElementById("wrDoc")); markDirty();
+    m.textContent = `✅ 피드백 ${fb.length}개를 불러왔어요. 🧑‍🏫 4주차 피드백 반영 표에 ${a}개, 2️⃣ 보완 목록 맨 위에 ${b}개를 넣었어요 (초록 칸). 💾 저장하기를 눌러 주세요.`; m.className = "wr-status ok"; }
+  else { m.textContent = `피드백 ${fb.length}개를 확인했어요. 이미 개발일지에 들어 있어요.`; m.className = "wr-status ok"; }
 }
 function fixList(){
   const t = onDevlog5() && fixTable(), out = [];
@@ -1992,8 +2019,12 @@ function finalBox(lite, st){
         <div data-fleft></div>
       </div>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>출시 전 점검하고 보완 목록 정하기 <span>개발일지 🧑‍🏫 · 1️⃣ · 2️⃣</span></div>
-      <p class="hint">위 게임을 <b>처음 하는 친구</b>처럼 해 보고 아래 개발일지 <b>1️⃣ 출시 전 점검</b> 표를 채워요. 그다음 <b>2️⃣ 보완 목록</b>에 이번 주에 고칠 것을 중요한 순서대로 3~5개 적어요. (멘토 선생님 피드백과 4주차에 남은 문제는 1단계에서 자동으로 들어가요. <b>🛠 피드백을 가장 먼저</b> 고쳐요)</p>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>4주차 피드백 불러오고 보완 목록 정하기 <span>개발일지 🧑‍🏫 · 1️⃣ · 2️⃣</span></div>
+      <p class="hint">먼저 <b>📥 4주차 피드백 불러오기</b>를 눌러요. 멘토 선생님의 🛠 고칠 점 · 💡 제안이 개발일지 <b>🧑‍🏫 4주차 피드백 반영</b> 표와 <b>2️⃣ 보완 목록 맨 위</b>에 들어가요.</p>
+      <div class="btns"><button class="btn primary" type="button" data-fbload>📥 4주차 피드백 불러오기</button></div>
+      <p class="wr-status" data-fbmsg></p>
+      <div data-fblist></div>
+      <p class="hint">그다음 위 게임을 <b>처음 하는 친구</b>처럼 해 보고 <b>1️⃣ 출시 전 점검</b> 표를 채우고, <b>2️⃣ 보완 목록</b>을 중요한 순서대로 3~5개로 정리해요. <b>🛠 피드백을 가장 먼저</b> 고쳐요. (4주차에 남은 문제는 1단계에서 자동으로 들어가요)</p>
     </div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>Gemini에서 이어 만들기 <span>게임 코드 + 보완 목록이 함께 들어가요</span></div>
       <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-fout>먼저 1단계에서 4주차 게임을 불러와 주세요.</pre></details>
@@ -2083,8 +2114,7 @@ function mountFinal(){
   const ready = () => {
     $("[data-fgame]").hidden = !F5.code; if(F5.code) $("[data-fframe]").srcdoc = F5.code;
     const L = F5.left.concat(F5.next);
-    $("[data-fleft]").innerHTML = (F5.fb.length ? `<p class="hint" style="margin-top:10px">🧑‍🏫 <b>멘토 선생님 피드백</b> (가장 먼저 반영해요)</p><ul class="wr-ai-steps">${F5.fb.map(x => `<li>${esc(x[2])} <b>${esc(x[0])}</b> ${esc(x[1])}</li>`).join("")}</ul>` : "")
-      + (L.length ? `<p class="hint" style="margin-top:10px">📌 <b>4주차에 남긴 문제 · 다음에 할 일</b></p><ul class="wr-ai-steps">${L.map(x => `<li>${x[0] ? `[${esc(x[0])}] ` : ""}${esc(x[1])}</li>`).join("")}</ul>` : "");
+    $("[data-fleft]").innerHTML = (L.length ? `<p class="hint" style="margin-top:10px">📌 <b>4주차에 남긴 문제 · 다음에 할 일</b></p><ul class="wr-ai-steps">${L.map(x => `<li>${x[0] ? `[${esc(x[0])}] ` : ""}${esc(x[1])}</li>`).join("")}</ul>` : "");
     out.textContent = F5.code ? contPrompt(false).replace(/\(ver\d+ 게임 코드 (\d+)줄을 함께 보냈어요\)$/, "```html\n(내 게임 코드 $1줄이 여기에 들어가요)\n```") : "4주차 게임이 아직 없어서 프롬프트를 만들 수 없어요.";
     cp.disabled = !F5.code; verIn.value = Math.max(+verIn.value || 0, F5.ver + 1); drawPatchPeek();
   };
@@ -2093,8 +2123,8 @@ function mountFinal(){
     try{
       await loadFinal(); ready();
       if(!F5.code){ msg.innerHTML = `⚠️ 아직 올린 게임이 없어요. <a href="#/write/4/${esc(W.st.repo)}/0">4주차 작성하기</a>에서 ver1·ver2를 먼저 올려 주세요.`; msg.className = "wr-status warn"; return; }
-      F5.fbn = 0; const n = prefillFixes();
-      msg.textContent = `✅ ver${F5.ver} 게임을 불러왔어요. 아래에서 바로 해 볼 수 있어요.` + (n ? ` 멘토 피드백과 4주차에 남은 문제 ${n}개를 2️⃣ 보완 목록에 넣었어요 (초록 칸).` : "") + (F5.fbn ? ` 🧑‍🏫 4주차 피드백 반영 표에도 피드백 ${F5.fbn}개를 넣었어요.` : "");
+      const n = prefillFixes();
+      msg.textContent = `✅ ver${F5.ver} 게임을 불러왔어요. 아래에서 바로 해 볼 수 있어요.` + (n ? ` 4주차에 남은 문제 ${n}개를 2️⃣ 보완 목록에 넣었어요 (초록 칸).` : "") + " 2단계에서 🧑‍🏫 4주차 피드백도 불러와요.";
       msg.className = "wr-status ok";
     }catch(_){ msg.textContent = "게임을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
@@ -2102,6 +2132,8 @@ function mountFinal(){
   $("[data-fdl]").onclick = () => dl(`ver${F5.ver}.html`, new Blob([F5.code], { type:"text/html;charset=utf-8" }));
   cp.onclick = () => { if(!F5.code) return; copyText(contPrompt(true), cp); out.textContent = contPrompt(false); if(putContInLog()) setStatus("프롬프트를 개발일지 3️⃣에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); };
   mountReq(box);
+  /* 2 🧑‍🏫 4주차 피드백 */
+  $("[data-fbload]").onclick = async e => { const b = e.currentTarget; b.disabled = true; await loadFeedback(box); b.disabled = false; };
   /* 5 패치노트 */
   $("[data-pcopy]").onclick = e => copyText(PATCH_PROMPT, e.currentTarget);
   const pmsg = $("[data-pmsg]"), plist = $("[data-plist]"), ppaste = $("[data-ppaste]");
