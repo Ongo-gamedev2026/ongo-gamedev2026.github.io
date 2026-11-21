@@ -2065,7 +2065,7 @@ function finalBox(lite, st){
     </div>
     <div class="wr-ai-step" data-agbox><p class="wr-label" style="margin:2px 0 6px">🛸 2부 · Antigravity로 더 만들기 <span class="hint">1부에서 원하는 게임이 나온 다음에 해요</span></p>
       <div class="wr-ai-h"><i>7</i>Antigravity 설치하고 로그인하기 <span>처음 한 번만</span></div>
-      <p class="hint">자료실의 설치 가이드를 보고 따라 해요. <b>개인 Gmail 계정</b>과 <b>Chrome</b>이 필요해요.</p>
+      <p class="hint">자료실의 설치 가이드를 보고 따라 해요. <b>학교 Google 계정(edu)</b>과 <b>Chrome</b>이 필요해요. (Google AI 유료 요금제를 쓰는 개인 계정이 있으면 그 계정도 좋아요)</p>
       <div class="btns"><a class="btn" href="${AG_GUIDE}" target="_blank" rel="noopener">📚 Antigravity 설치 가이드 열기 ↗</a></div>
     </div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>8</i>내 게임 폴더 만들기 <span>game.html + 기획서.md</span></div>
