@@ -1619,7 +1619,7 @@ function mountGame(){
    FINAL_WEEKS에 주차를 넣으면 그 주차 개발일지 작성 화면에 나와요. */
 const FINAL_WEEKS = [5];
 const DEVLOG5 = "devlog/week05.md";
-const F5 = { repo:null, code:"", ver:2, left:[], next:[], undo:null };
+const F5 = { repo:null, code:"", ver:2, left:[], next:[], fb:[], undo:null };
 const onDevlog5 = () => W.doc && W.doc.path === DEVLOG5 && W.segs.length;
 const isPlaceholderGame = h => /<title>\s*게임 준비 중\s*<\/title>/.test(h || "");
 const cellV = c => c ? (c.ro ? c.text : c.val || "").trim() : "";
@@ -1627,7 +1627,10 @@ const lines = v => String(v || "").split("\n").map(x => x.replace(/^[-*•·]\s*
 
 /* 4주차 개발일지에서 남은 문제·다음에 할 일·마지막 버전 번호를 찾아요 */
 function readWeek4(md){
-  const segs = parseMd(md), out = { left:[], next:[], ver:0 };
+  const segs = parseMd(md), out = { left:[], next:[], ver:0, fb:[] };
+  const fb = segUnder(/멘토 피드백/, s => s.t === "table", segs);      // 🧑‍🏫 멘토 피드백: 🛠 고칠 점 · 💡 제안만
+  if(fb) fb.rows.forEach(r => { const k = cellV(r[1]), v = cellV(r[2]).replace(/\s*\n\s*/g, " ");
+    if(v && !isBlank(v) && !/^\(/.test(v) && /🛠|💡|고칠|제안/.test(k)) out.fb.push([cellV(r[0]) || "", v, /💡|제안/.test(k) ? "💡" : "🛠"]); });
   const req = segUnder(/추가 · 수정|수정 요청 기록|추가·수정/, s => s.t === "table", segs);
   if(req) req.rows.forEach(r => { const v = cellV(r[3]); if(v && !isBlank(v) && !/^\(/.test(v)) out.left.push([kindName(cellV(r[0])) || "수정", v]); });
   const nx = segUnder(/다음 주/, s => s.t === "list", segs);
@@ -1640,7 +1643,7 @@ async function loadFinal(){
   const code = await fetchDoc(GAME_PATH);
   let w4 = null; try{ w4 = await fetchDoc(DEVLOG4); }catch(_){}
   const r = w4 ? readWeek4(w4) : { left:[], next:[], ver:0 };
-  Object.assign(F5, { repo:W.st.repo, code:code && !isPlaceholderGame(code) ? code : "", left:r.left, next:r.next, ver:r.ver || 2 });
+  Object.assign(F5, { repo:W.st.repo, code:code && !isPlaceholderGame(code) ? code : "", left:r.left, next:r.next, fb:r.fb, ver:r.ver || 2 });
   return F5;
 }
 const fixTable = () => segUnder(/보완 목록/, s => s.t === "table");
@@ -1650,7 +1653,13 @@ function prefillFixes(){
   const t = fixTable(); if(!t) return 0;
   const have = new Set(t.rows.map(r => normName(cellV(r[1])).slice(0, 20)).filter(Boolean));
   let n = 0;
-  F5.left.concat(F5.next).forEach(([k, v]) => {
+  const ft = segUnder(/피드백 반영/, s => s.t === "table");       // 🧑‍🏫 4주차 피드백 반영 표에 번호·피드백 넣기
+  if(ft) F5.fb.forEach(([no, v]) => {
+    const key = normName(v).slice(0, 20); if(ft.rows.some(r => normName(cellV(r[1])).slice(0, 20) === key)) return;
+    let r = ft.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = ft.head.map(() => ({ ro:false, ph:"", val:"" })); ft.rows.push(r); }
+    if(r[0] && !r[0].ro){ r[0].val = no; r[0].hl = "new"; } if(r[1] && !r[1].ro){ r[1].val = v; r[1].hl = "new"; } F5.fbn = (F5.fbn || 0) + 1;
+  });
+  F5.fb.map(([no, v]) => ["수정", `[피드백 ${no}] ${v}`]).concat(F5.left, F5.next).forEach(([k, v]) => {
     const key = normName(v).slice(0, 20); if(!key || have.has(key)) return; have.add(key);
     let r = t.rows.find(r => r.every(c => c.ro || !(c.val || "").trim())); if(!r){ r = t.head.map(() => ({ ro:false, ph:"", val:"" })); t.rows.push(r); }
     if(k){ r[0].val = k; r[0].hl = "new"; } r[1].val = v; r[1].hl = "new"; n++;
@@ -1662,7 +1671,7 @@ function prefillFixes(){
 function fixList(){
   const t = onDevlog5() && fixTable(), out = [];
   if(t) t.rows.forEach(r => { const v = cellV(r[1]); if(v) out.push([kindName(cellV(r[0])), v]); });
-  if(!out.length) F5.left.concat(F5.next).forEach(x => out.push(x));
+  if(!out.length) F5.fb.map(([no, v]) => ["수정", `[피드백 ${no}] ${v}`]).concat(F5.left, F5.next).forEach(x => out.push(x));
   return out;
 }
 
@@ -1696,6 +1705,67 @@ function putContInLog(){
   if(!onDevlog5()) return false;
   const c = segUnder(/이어 만들기/, s => s.t === "code"); if(!c) return false;
   c.val = contPrompt(false); renderSegs(document.getElementById("wrDoc")); markDirty(); return true;
+}
+
+/* ⑧~⑩ 2부 · Antigravity로 더 만들기
+   1부(Gemini)에서 보완한 game.html + 기획서.md를 한 폴더에 넣고 Antigravity 에이전트에게 맡겨요.
+   패치노트는 5단계 칸에 붙여 넣고, 완성 게임은 6단계에서 다음 버전으로 올려요. */
+const AG_GUIDE = "https://ongo-gamedev2026.github.io/materials/week5/antigravity_week5.html";
+const AG_PROMPT = `너는 고등학생과 함께 HTML 웹게임을 완성하는 게임 개발자야.
+이 폴더에 내 게임 자료가 있어.
+- game.html : Gemini로 보완을 마친 지금 내 게임
+- 기획서.md : 내가 정리한 게임 기획서
+
+[먼저 할 일]
+1. 두 파일을 읽고, 기획서와 지금 게임을 비교해서 표로 정리해 줘.
+   | 기획서 내용 | 게임에 있나요? (✅ 있음 / 🔺 조금 다름 / ❌ 없음) |
+2. 이어서 만들면 좋을 것을 중요한 순서대로 3가지 제안해 줘.
+내가 고르고 "좋아"라고 하기 전에는 코드를 고치지 마.
+
+[만드는 규칙]
+- 고치기 전에 game.html을 game-backup.html로 복사해 둬.
+- game.html 파일 하나에 HTML·CSS·JavaScript를 모두 넣고, 외부 파일이나 라이브러리는 쓰지 마.
+- 지금 잘 되는 기능은 망가뜨리지 마.
+- 기획서에 없는 기능은 마음대로 넣지 마.
+- 속도·시간·개수 같은 숫자는 코드 맨 위 "설정값"에 모아 두고 한국어 주석을 달아.
+
+[고친 다음]
+브라우저로 직접 실행해서 시작 → 플레이 → 클리어/게임오버 → 다시 하기가 되는지 확인하고 표로 알려 줘.`;
+const AG_PATCH = `game-backup.html(처음 게임)과 지금 game.html을 비교하고, 우리가 나눈 대화를 처음부터 끝까지 살펴봐서 이번에 바뀐 내용을 "패치노트"로 정리해 줘.
+이 폴더에 patchnote.txt 파일로 저장하고, 같은 내용을 글로도 보여 줘.
+
+[규칙]
+- 게임을 처음 하는 친구가 읽는다고 생각하고, 쉬운 말로 한 줄에 하나씩 써.
+- 숫자가 바뀌었으면 숫자도 써. (예: 적 속도 3 → 2)
+- 실제로 바꾸지 않은 것은 지어내지 마. 해당하는 것이 없으면 "없음"이라고 써.
+- 대괄호 [ ] 안의 칸 이름은 절대 바꾸지 말고, 한 줄에 하나씩 써. 표로 만들지 마. 칸은 | 로 나눠.
+
+[게임 제목]
+[한 줄 소개] 처음 하는 사람에게 이 게임을 한 문장으로
+[목표] 이기는 방법(클리어 조건)을 한 문장으로
+[조작] 키 | 동작   (하나마다 한 줄)
+[새로 추가] 새로 생긴 기능 (하나마다 한 줄)
+[바뀐 점] 있던 것을 바꾼 점 (하나마다 한 줄)
+[고친 버그] 고친 버그 (하나마다 한 줄)
+[남은 문제] 아직 해결하지 못한 것 (하나마다 한 줄)
+[보완 결과] 내가 고른 제안 | ✅ 잘 됨 / 🔺 조금 됨 / ❌ 안 됨   (고른 것마다 한 줄. 내가 결과를 말하지 않았으면 ❓ 확인 필요)`;
+function putAgInLog(){
+  if(!onDevlog5()) return false;
+  const c = segUnder(/Antigravity/, s => s.t === "code"); if(!c) return false;
+  c.val = AG_PROMPT; renderSegs(document.getElementById("wrDoc")); markDirty(); return true;
+}
+async function dlAgFiles(box){
+  const m = box.querySelector("[data-amsg]"); m.textContent = "내 게임과 기획서를 불러오는 중…"; m.className = "wr-status";
+  try{
+    const game = await fetchDoc(GAME_PATH);
+    let plan = await fetchDoc(PLAN_PATH); if(plan == null) plan = await fetchDoc(SRC_PATH);
+    const got = [];
+    if(game && !isPlaceholderGame(game)){ dl("game.html", new Blob([game], { type:"text/html;charset=utf-8" })); got.push("game.html"); }
+    if(plan){ setTimeout(() => dl("기획서.md", new Blob([plan], { type:"text/markdown;charset=utf-8" })), 400); got.push("기획서.md"); }
+    if(!got.length){ m.textContent = "올린 게임과 기획서를 찾지 못했어요. 선생님께 알려 주세요."; m.className = "wr-status err"; return; }
+    m.innerHTML = `💾 <b>${got.join(", ")}</b>을 내려받았어요. 두 파일을 <b>내 게임 폴더</b>로 옮겨요.` + (got.includes("game.html") ? "" : " (올린 게임이 없어서 기획서만 받았어요)");
+    m.className = "wr-status ok";
+  }catch(_){ m.textContent = "불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; m.className = "wr-status err"; }
 }
 
 /* ⑤ 패치노트 */
@@ -1906,12 +1976,13 @@ function finalBox(lite, st){
   st = st || W.st;
   const gem = `<a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini ↗</a>`;
   if(lite) return `<section class="wr-ai" id="wrFinal">
-    <div class="wr-ai-title">🚀 내 게임 완성하고 올리기 <span>4주차 게임 → 보완 → 패치노트 → 완성 버전 → 플레이 소감</span></div>
+    <div class="wr-ai-title">🚀 내 게임 완성하고 올리기 <span>4주차 게임 → Gemini 보완 → Antigravity로 더 만들기 → 패치노트 → 완성 버전 → 플레이 소감</span></div>
     <p class="hint">5주차는 <b>작성하기 화면</b>에서 단계별로 진행해요. 4주차 게임 불러오기부터 완성 버전 올리기, 친구 소감 불러오기까지 한 화면에 있어요.</p>
     <div class="btns"><a class="btn primary" href="#/write/${W.w.week}/${esc(st.repo)}/0">✏️ 작성하기에서 시작하기</a><a class="btn" href="${hubUrl(st)}versions.html#reviews" target="_blank" rel="noopener">🎮 내 게임 페이지 · 받은 소감</a></div>
   </section>`;
   return `<section class="wr-ai" id="wrFinal">
-    <div class="wr-ai-title">🚀 내 게임 완성하고 올리기 <span>4주차 게임 → 보완 → 패치노트 → 완성 버전 → 플레이 소감</span></div>
+    <div class="wr-ai-title">🚀 내 게임 완성하고 올리기 <span>4주차 게임 → Gemini 보완 → Antigravity로 더 만들기 → 패치노트 → 완성 버전 → 플레이 소감</span></div>
+    <p class="wr-label" style="margin:2px 0 6px">🤖 1부 · Gemini로 4주차 게임 보완하기 <span class="hint">멘토 피드백부터 고쳐요</span></p>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>1</i>4주차 게임 불러오기 <span>지금 올라가 있는 내 게임(ver2)</span></div>
       <div class="btns"><button class="btn primary" type="button" data-fload>📥 4주차 게임 불러오기</button></div>
       <p class="wr-status" data-fmsg></p>
@@ -1921,8 +1992,8 @@ function finalBox(lite, st){
         <div data-fleft></div>
       </div>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>출시 전 점검하고 보완 목록 정하기 <span>개발일지 1️⃣ · 2️⃣</span></div>
-      <p class="hint">위 게임을 <b>처음 하는 친구</b>처럼 해 보고 아래 개발일지 <b>1️⃣ 출시 전 점검</b> 표를 채워요. 그다음 <b>2️⃣ 보완 목록</b>에 이번 주에 고칠 것을 중요한 순서대로 3~5개 적어요. (4주차에 남은 문제는 1단계에서 자동으로 들어가요)</p>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>2</i>출시 전 점검하고 보완 목록 정하기 <span>개발일지 🧑‍🏫 · 1️⃣ · 2️⃣</span></div>
+      <p class="hint">위 게임을 <b>처음 하는 친구</b>처럼 해 보고 아래 개발일지 <b>1️⃣ 출시 전 점검</b> 표를 채워요. 그다음 <b>2️⃣ 보완 목록</b>에 이번 주에 고칠 것을 중요한 순서대로 3~5개 적어요. (멘토 선생님 피드백과 4주차에 남은 문제는 1단계에서 자동으로 들어가요. <b>🛠 피드백을 가장 먼저</b> 고쳐요)</p>
     </div>
     <div class="wr-ai-step"><div class="wr-ai-h"><i>3</i>Gemini에서 이어 만들기 <span>게임 코드 + 보완 목록이 함께 들어가요</span></div>
       <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out" data-fout>먼저 1단계에서 4주차 게임을 불러와 주세요.</pre></details>
@@ -1942,15 +2013,16 @@ function finalBox(lite, st){
       <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(PATCH_PROMPT)}</pre></details>
       <div class="btns"><button class="btn" type="button" data-pcopy>📋 패치노트 요청 프롬프트 복사</button></div>
       <p class="hint">Word 파일을 올리거나, Gemini가 글로 보여 준 답을 복사해 아래 칸에 붙여 넣어요. 개발일지 <b>4️⃣ 패치노트 · 5️⃣ 게임 소개 · 2️⃣ 결과</b>에 채워져요.</p>
-      <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-pfile hidden>📄 Word 파일 올리기 (.docx)</label><span data-pname class="hint" style="margin:0"></span></div>
+      <div class="wr-ai-drop"><label class="btn primary"><input type="file" accept=".docx,.txt,.md" data-pfile hidden>📄 Word · 텍스트 파일 올리기 (.docx · .txt)</label><span data-pname class="hint" style="margin:0"></span></div>
       <div class="wr-ai-or">또는 <b>Gemini가 글로 정리해 준 답</b>을 복사해서 붙여 넣어요</div>
       <textarea class="wr-in wr-ai-paste" rows="5" data-ppaste placeholder="[게임 제목] ... [새로 추가] ... 처럼 시작하는 Gemini 답을 통째로 붙여 넣어요"></textarea>
       <div class="btns"><button class="btn primary" type="button" data-pfill>✍️ 붙여 넣은 글을 개발일지에 반영하기</button></div>
       <p class="wr-status" data-pmsg></p>
       <div class="wr-ai-log" data-plist></div>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>6</i>완성 버전 올리기 <span>누구나 플레이할 수 있게</span></div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>6</i>보완한 게임 올리기 <span>1부 결과 중간 저장 · 2부 뒤에 다시 올려요</span></div>
       <p class="hint">Gemini Canvas의 <b>마지막 코드</b>를 넣고 <b>▶ 미리 해 보기</b>로 끝까지 해 본 다음 올려요. 올리면 <b>내 게임 · 게임 소개(5️⃣) · 패치노트(4️⃣)</b>가 함께 올라가고 5주차로 제출돼요.</p>
+      <p class="hint">💡 1부 결과를 먼저 올려 두면(예: ver3) 2부 Antigravity 작업이 잘 안 돼도 제출한 게임이 남아요. 2부를 마치면 <b>이 칸에 다시 와서</b> 다음 버전(예: ver4)으로 올려요.</p>
       ${finalSlotHtml()}
       <div class="wr-thumb" data-thumbbox>
         <div class="wr-label" style="margin:12px 0 4px">📸 게임 화면 사진 올리기 <span class="hint">(마을·전시용 썸네일)</span></div>
@@ -1960,7 +2032,40 @@ function finalBox(lite, st){
         <p class="wr-status" data-tmsg></p>
       </div>
     </div>
-    <div class="wr-ai-step"><div class="wr-ai-h"><i>7</i>친구 게임 플레이하고 소감 남기기 <span>3명 이상</span></div>
+    <div class="wr-ai-step" data-agbox><p class="wr-label" style="margin:2px 0 6px">🛸 2부 · Antigravity로 더 만들기 <span class="hint">1부에서 원하는 게임이 나온 다음에 해요</span></p>
+      <div class="wr-ai-h"><i>7</i>Antigravity 설치하고 로그인하기 <span>처음 한 번만</span></div>
+      <p class="hint">자료실의 설치 가이드를 보고 따라 해요. <b>개인 Gmail 계정</b>과 <b>Chrome</b>이 필요해요.</p>
+      <div class="btns"><a class="btn" href="${AG_GUIDE}" target="_blank" rel="noopener">📚 Antigravity 설치 가이드 열기 ↗</a></div>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>8</i>내 게임 폴더 만들기 <span>game.html + 기획서.md</span></div>
+      <ol class="wr-ai-steps">
+        <li>바탕 화면에 <b>영어 이름 폴더</b>를 하나 만들어요. (예: <code>my-game</code>)</li>
+        <li>아래 버튼으로 <b>지금 올라가 있는 게임(game.html)</b>과 <b>기획서.md</b>를 내려받아 그 폴더로 옮겨요. 6단계에서 올리지 않았다면 6단계 <b>💾 html 내려받기</b>로 받은 파일 이름을 <code>game.html</code>로 바꿔서 넣어요.</li>
+        <li>Antigravity 왼쪽 <b>프로젝트</b>에서 <b>새 프로젝트</b>를 만들고 이 폴더를 골라요.</li>
+      </ol>
+      <div class="btns"><button class="btn primary" type="button" data-agdl>💾 game.html · 기획서.md 내려받기</button></div>
+      <p class="wr-status" data-amsg></p>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>9</i>에이전트에게 이어서 만들기 맡기기 <span>먼저 계획을 보고 골라요</span></div>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(AG_PROMPT)}</pre></details>
+      <div class="btns"><button class="btn primary" type="button" data-agcopy>📋 Antigravity 프롬프트 복사</button></div>
+      <ol class="wr-ai-steps">
+        <li>프로젝트에서 <b>새 대화</b>를 열고, 복사한 프롬프트를 붙여 넣고 보내요.</li>
+        <li>에이전트가 보여 준 <b>비교표와 제안 3가지</b>를 읽고, 만들 것을 골라 "1번, 3번 좋아"처럼 말해요.</li>
+        <li>파일을 고치거나 명령을 실행해도 되는지 물어보면 내용을 읽어 보고 허락해요.</li>
+      </ol>
+      <p class="hint">복사하면 아래 개발일지 <b>🛸 Antigravity 작업 기록</b>에도 들어가요. 에이전트의 제안과 내가 고른 것을 그 표에 적어요.</p>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>10</i>직접 해 보고 패치노트 받기 <span>같은 대화에서</span></div>
+      <ol class="wr-ai-steps">
+        <li>폴더의 <b>game.html</b>을 더블클릭해 Chrome에서 직접 해 봐요. 이상한 곳은 하나씩 말해서 고쳐요.</li>
+        <li>다 되면 아래 패치노트 프롬프트를 보내요. 에이전트가 <b>patchnote.txt</b>를 만들어 줘요.</li>
+        <li><b>5단계</b>에서 patchnote.txt를 올리거나 글을 붙여 넣어 반영하고, <b>6단계</b>에서 폴더의 game.html을 골라 다음 버전으로 올려요.</li>
+      </ol>
+      <details class="wr-ai-peek"><summary>프롬프트 보기</summary><pre class="wr-ai-out">${esc(AG_PATCH)}</pre></details>
+      <div class="btns"><button class="btn" type="button" data-agpatch>📋 패치노트 요청 프롬프트 복사</button></div>
+    </div>
+    <div class="wr-ai-step"><div class="wr-ai-h"><i>11</i>친구 게임 플레이하고 소감 남기기 <span>3명 이상</span></div>
       <p class="hint">친구 게임을 끝까지 해 보고, 게임 페이지 맨 아래 <b>💬 플레이 소감</b>에 내 게임 번호 · 학번 · 이름 · ⭐ 별점 · 👍 재미있던 요소 · 💡 추가되면 좋을 요소를 남겨요. (열쇠는 필요 없어요) 소감은 <b>구체적으로</b>: "재밌어요" 대신 "어떤 순간이 왜 재밌었는지".</p>
       <div class="btns"><button class="btn" type="button" data-vload>🔄 친구 게임 목록 · 소감 현황 보기</button><button class="btn primary" type="button" data-vfill>📥 받은 소감 · 내가 남긴 소감 불러오기</button><a class="btn" href="${hubUrl(st)}versions.html#reviews" target="_blank" rel="noopener">🎮 내 게임 페이지</a></div>
       <p class="wr-status" data-vmsg></p>
@@ -1972,13 +2077,14 @@ function finalBox(lite, st){
 }
 function mountFinal(){
   const box = document.getElementById("wrFinal"); if(!box || !box.querySelector("[data-fload]")) return;
-  if(F5.repo !== W.st.repo){ Object.assign(F5, { repo:null, code:"", ver:2, left:[], next:[] }); }
+  if(F5.repo !== W.st.repo){ Object.assign(F5, { repo:null, code:"", ver:2, left:[], next:[], fb:[] }); }
   const $ = s => box.querySelector(s), msg = $("[data-fmsg]"), out = $("[data-fout]"), cp = $("[data-fcopy]"), verIn = $("[data-fver]");
   verIn.value = F5.ver + 1;
   const ready = () => {
     $("[data-fgame]").hidden = !F5.code; if(F5.code) $("[data-fframe]").srcdoc = F5.code;
     const L = F5.left.concat(F5.next);
-    $("[data-fleft]").innerHTML = L.length ? `<p class="hint" style="margin-top:10px">📌 <b>4주차에 남긴 문제 · 다음에 할 일</b></p><ul class="wr-ai-steps">${L.map(x => `<li>${x[0] ? `[${esc(x[0])}] ` : ""}${esc(x[1])}</li>`).join("")}</ul>` : "";
+    $("[data-fleft]").innerHTML = (F5.fb.length ? `<p class="hint" style="margin-top:10px">🧑‍🏫 <b>멘토 선생님 피드백</b> (가장 먼저 반영해요)</p><ul class="wr-ai-steps">${F5.fb.map(x => `<li>${esc(x[2])} <b>${esc(x[0])}</b> ${esc(x[1])}</li>`).join("")}</ul>` : "")
+      + (L.length ? `<p class="hint" style="margin-top:10px">📌 <b>4주차에 남긴 문제 · 다음에 할 일</b></p><ul class="wr-ai-steps">${L.map(x => `<li>${x[0] ? `[${esc(x[0])}] ` : ""}${esc(x[1])}</li>`).join("")}</ul>` : "");
     out.textContent = F5.code ? contPrompt(false).replace(/\(ver\d+ 게임 코드 (\d+)줄을 함께 보냈어요\)$/, "```html\n(내 게임 코드 $1줄이 여기에 들어가요)\n```") : "4주차 게임이 아직 없어서 프롬프트를 만들 수 없어요.";
     cp.disabled = !F5.code; verIn.value = Math.max(+verIn.value || 0, F5.ver + 1); drawPatchPeek();
   };
@@ -1987,8 +2093,8 @@ function mountFinal(){
     try{
       await loadFinal(); ready();
       if(!F5.code){ msg.innerHTML = `⚠️ 아직 올린 게임이 없어요. <a href="#/write/4/${esc(W.st.repo)}/0">4주차 작성하기</a>에서 ver1·ver2를 먼저 올려 주세요.`; msg.className = "wr-status warn"; return; }
-      const n = prefillFixes();
-      msg.textContent = `✅ ver${F5.ver} 게임을 불러왔어요. 아래에서 바로 해 볼 수 있어요.` + (n ? ` 4주차에 남은 문제 ${n}개를 2️⃣ 보완 목록에 넣었어요 (초록 칸).` : "");
+      F5.fbn = 0; const n = prefillFixes();
+      msg.textContent = `✅ ver${F5.ver} 게임을 불러왔어요. 아래에서 바로 해 볼 수 있어요.` + (n ? ` 멘토 피드백과 4주차에 남은 문제 ${n}개를 2️⃣ 보완 목록에 넣었어요 (초록 칸).` : "") + (F5.fbn ? ` 🧑‍🏫 4주차 피드백 반영 표에도 피드백 ${F5.fbn}개를 넣었어요.` : "");
       msg.className = "wr-status ok";
     }catch(_){ msg.textContent = "게임을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요."; msg.className = "wr-status err"; }
   };
@@ -2020,7 +2126,11 @@ function mountFinal(){
   const tb = $("[data-thumbbox]"), tp = $("[data-tpaste]");
   tp.addEventListener("paste", e => { const it = [...(e.clipboardData || {}).items || []].find(x => /^image\//.test(x.type)); if(it){ e.preventDefault(); uploadThumb(it.getAsFile(), tb); } else { const m = tb.querySelector("[data-tmsg]"); m.textContent = "복사한 그림이 없어요. Win + Shift + S로 먼저 캡처해 주세요."; m.className = "wr-status warn"; } });
   $("[data-tfile]").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) uploadThumb(f, tb); };
-  /* 7 소감 */
+  /* 7~10 Antigravity */
+  $("[data-agdl]").onclick = () => dlAgFiles(box);
+  $("[data-agcopy]").onclick = e => { copyText(AG_PROMPT, e.currentTarget); if(putAgInLog()) setStatus("프롬프트를 개발일지 🛸 Antigravity 작업 기록에 넣었어요. 💾 저장하기를 눌러 주세요", "warn"); };
+  $("[data-agpatch]").onclick = e => copyText(AG_PATCH, e.currentTarget);
+  /* 11 소감 */
   $("[data-vload]").onclick = () => loadReviews(box);
   $("[data-vfill]").onclick = async () => {
     const R = await loadReviews(box); if(!R) return;
