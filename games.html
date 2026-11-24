@@ -398,9 +398,11 @@ const S = { games:[], genre:"전체", q:"", reviews:[] };
 /* 📌 맨 위에 보여 줄 게임 — 휴대폰(QR)으로 들어오면 이 게임들만 보여요. PC에서는 이 게임들 아래에 나머지 게임이 이어져요.
    바꾸려면 아래 목록만 고치세요. 비워 두면([]) 원래처럼 모든 게임이 보여요. */
 const FEATURED = ["game-01", "game-02"];
-const FOCUS_LIST = FEATURED.filter(r => /^game-\d{2}$/.test(r));
+/* 📱 휴대폰(QR)으로 들어오면 이 게임만 보이고 플레이할 수 있어요 */
+const MOBILE_ONLY = ["game-01"];
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)) || (matchMedia("(pointer:coarse)").matches && innerWidth < 900);
-const SOLO = FOCUS_LIST.length > 0 && IS_MOBILE;
+const SOLO = MOBILE_ONLY.length > 0 && IS_MOBILE;
+const FOCUS_LIST = (SOLO ? MOBILE_ONLY : FEATURED).filter(r => /^game-\d{2}$/.test(r));
 if(SOLO) document.body.classList.add("solo");
 
 /* 기획서에서 "한 문장 소개" 꺼내기 */
@@ -592,6 +594,7 @@ function renderFocus(){
   const list = FOCUS_LIST.map(r => S.games.find(x => x.repo === r)).filter(Boolean);
   if(!list.length) return;
   box.hidden = false;
+  box.classList.toggle("one", list.length === 1);
   box.innerHTML = `<div class="sec-head"><h2>🎮 지금 플레이해 보세요</h2><span class="more">플레이하고 소감을 남기면 🍪 간식!</span></div>
   <div class="focus-grid">${list.map(focusCard).join("")}</div>
   ${SOLO ? "" : `<div class="more-banner"><span>👇</span><div>아래의 게임도 플레이할 수 있어요!<small>온고 게임제작반 친구들이 만든 다른 게임도 둘러보세요.</small></div></div>`}`;
