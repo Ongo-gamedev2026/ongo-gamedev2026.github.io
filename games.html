@@ -254,7 +254,6 @@ footer a{color:#fff;font-weight:700}
     <div class="top-row">
       <a class="logo" href="#"><span class="mark">🕹</span><span>온고 게임 아카이브<small>2026 게임제작반 · AI로 만든 게임</small></span></a>
       <nav class="menu" aria-label="메뉴">
-        <a href="#popular">인기 게임</a>
         <a href="#all">모든 게임</a>
         <a href="#wip">준비 중</a>
         <a href="https://ongo-gamedev2026.github.io/">제작반 홈 ↗</a>
@@ -271,7 +270,6 @@ footer a{color:#fff;font-weight:700}
         <button type="submit" aria-label="검색">🔍</button>
       </form>
       <nav>
-        <a href="#popular">🔥 인기 게임</a>
         <a href="#all">🎮 모든 게임</a>
         <a href="#wip">⏳ 준비 중</a>
         <a href="https://ongo-gamedev2026.github.io/">🏡 제작반 홈</a>
@@ -299,10 +297,6 @@ footer a{color:#fff;font-weight:700}
   <div class="wrap" id="focusWrap" hidden></div>
   <div class="wrap layout">
     <div>
-      <section class="block" id="popular">
-        <div class="sec-head"><h2>🔥 인기 게임</h2><span class="more">별점·소감 많은 순</span></div>
-        <div class="grid big" id="popGrid"></div>
-      </section>
 
       <section class="block" id="all">
         <div class="sec-head"><h2>🎮 모든 게임</h2><span class="more" id="allCount"></span></div>
@@ -491,12 +485,6 @@ function render(){
   const rest = S.games.filter(g => !FOCUS_LIST.includes(g.repo));
   const play = rest.filter(g => g.playable), wip = rest.filter(g => !g.playable);
 
-  /* 인기: 평균 별점 → 소감 수 → 최근 업데이트 */
-  const pop = [...play].sort((a,b) => {
-    const ra = rating(a.repo), rb = rating(b.repo);
-    return ((rb?.avg||0) - (ra?.avg||0)) || ((rb?.n||0) - (ra?.n||0)) || (b.updated||"").localeCompare(a.updated||"");
-  }).slice(0, 3);
-  $("#popGrid").innerHTML = pop.map(cardHTML).join("") || `<div class="empty">아직 플레이할 수 있는 게임이 없어요.</div>`;
 
   /* 장르 칩 */
   const genres = ["전체", ...new Set(play.map(g => g.genre).filter(Boolean))];
@@ -764,7 +752,7 @@ $("#burger").onclick = () => toggleMenu();
 
 /* ---------- 시작 ---------- */
 (async function start(){
-  $("#popGrid").innerHTML = skel(3); $("#allGrid").innerHTML = skel(6);
+  $("#allGrid").innerHTML = skel(6);
   const [stu, wk, sub] = await Promise.all([
     getJSON(`${BASE}/students.json?t=${Date.now()}`),
     getJSON(`${BASE}/weeks.json?t=${Date.now()}`),
@@ -774,7 +762,7 @@ $("#burger").onclick = () => toggleMenu();
   const gameWeeks = new Set(((wk && wk.weeks) || []).filter(w => w.game).map(w => w.week));
   const recs = (sub && sub.records) || [];
   S.games = await Promise.all(students.map(st => loadGame(st, recs, gameWeeks)));
-  if(FOCUS_LIST.length){ $("#popular .sec-head h2").textContent = "🔥 다른 인기 게임"; $("#all .sec-head h2").textContent = "🎮 다른 게임 모두 보기"; }
+  if(FOCUS_LIST.length){ $("#all .sec-head h2").textContent = "🎮 다른 게임 모두 보기"; }
   try{ if(window.Reviews) S.reviews = await Reviews.all(); }catch(_){}
   render(); renderFocus();
   /* 썸네일(thumbnail.png)이 있으면 바꿔 끼워요 */
