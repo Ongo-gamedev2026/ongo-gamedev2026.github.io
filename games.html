@@ -75,6 +75,10 @@ section.block{margin-bottom:34px}
 .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .thumb .emoji{position:absolute;right:10px;bottom:2px;font-size:62px;opacity:.95;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
 .thumb .tt{position:relative;font-weight:900;font-size:19px;line-height:1.2;letter-spacing:-.5px;max-width:72%;text-shadow:0 2px 8px rgba(0,0,0,.25)}
+.thumb .live{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .4s;background:#000}
+.thumb .live.on{opacity:1}
+.thumb .live iframe{position:absolute;top:0;left:0;border:0;transform-origin:0 0;pointer-events:none;background:#fff}
+.thumb .loading{position:absolute;left:12px;bottom:10px;z-index:1;font-size:11.5px;font-weight:700;background:rgba(0,0,0,.45);color:#fff;border-radius:999px;padding:2px 8px}
 .thumb .play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,12,40,.45);opacity:0;transition:opacity .15s}
 .thumb .play span{background:#fff;color:var(--head);border-radius:999px;padding:8px 16px;font-weight:900;font-size:14px}
 .card:hover .play,.card:focus-visible .play{opacity:1}
@@ -398,7 +402,7 @@ async function loadGame(st, recs, gameWeeks){
     intro, goal: gj && gj.goal, controls: (gj && gj.controls) || [],
     genre: ex.genre || "", emoji: ex.emoji || "🎮", tags: ex.tags || [],
     tool: (gj && gj.tool) || (rels.some(r => /Antigravity/i.test(r.name || "")) ? "Antigravity" : "Gemini"),
-    ver, updated, rels, playable, mode, srcdoc, tag,
+    ver, updated, rels, playable, mode, srcdoc, tag, html: playable ? (mode === "tag" ? srcdoc : html) : null, live: false,
     thumb: null, color: PALETTE[(parseInt(st.no, 10) - 1 + PALETTE.length) % PALETTE.length]
   };
 }
@@ -418,8 +422,8 @@ function thumbHTML(g){
 function cardHTML(g){
   const avg = rating(g.repo);
   const pre = `[${g.playable ? "AI게임" : "준비 중"}${g.genre ? "/" + g.genre : ""}]`;
-  const tagName = g.playable ? "button" : "div";
-  return `<${tagName} class="card${g.playable ? "" : " wip"}" ${g.playable ? `type="button" data-play="${esc(g.repo)}" aria-label="${esc(g.title)} 플레이"` : ""}>
+  const tagName = "div";
+  return `<${tagName} class="card${g.playable ? "" : " wip"}" ${g.playable ? `role="button" tabindex="0" data-play="${esc(g.repo)}" aria-label="${esc(g.title)} 플레이"` : ""}>
     ${thumbHTML(g)}
     <div class="card-body">
       <div class="card-title"><span class="pre">${esc(pre)}</span> ${esc(g.title)}</div>
@@ -479,7 +483,59 @@ function render(){
   /* 태그 */
   const tags = [...new Set(play.flatMap(g => [g.genre, ...g.tags]).filter(Boolean))];
   $("#cloud").innerHTML = tags.map(t => `<button data-tag="${esc(t)}">#${esc(t)}</button>`).join("");
+  applyThumbs();
 }
+
+/* ---------- 썸네일: ① 학생이 올린 thumbnail.png → ② 게임 첫 화면(작게 띄워 멈춤) → ③ 기본 카드 ---------- */
+const LIVE_W = 960, LIVE_FREEZE_MS = 2500;
+const liveIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => {
+  if(!e.isIntersecting) return; liveIO.unobserve(e.target);
+  const g = S.games.find(x => x.repo === e.target.dataset.thumb); if(g) mountLive(e.target, g);
+}), { rootMargin:"200px" }) : null;
+function applyThumbs(){
+  document.querySelectorAll("[data-thumb]").forEach(el => {
+    const g = S.games.find(x => x.repo === el.dataset.thumb); if(!g) return;
+    if(g.thumb){
+      if(el.querySelector("img")) return;
+      el.querySelectorAll(".emoji,.tt,.live,.loading").forEach(x => x.remove());
+      const i = document.createElement("img"); i.src = g.thumb; i.alt = ""; el.prepend(i);
+    } else if(g.live && !el.dataset.liveMounted){
+      el.dataset.liveMounted = "1";
+      if(liveIO) liveIO.observe(el); else mountLive(el, g);
+    }
+  });
+}
+/* 게임 html 앞에 '조용히 첫 화면만' 스크립트를 넣어요: 포커스·소리·창 막기, 2.5초 뒤 멈춤 */
+function liveDoc(g){
+  const guard = `<base href="${BASE}/${g.repo}/play/"><script>(function(){var n=function(){};
+try{HTMLElement.prototype.focus=n;window.focus=n;window.alert=n;window.confirm=function(){return false};window.prompt=function(){return null};
+HTMLMediaElement.prototype.play=function(){return Promise.resolve()};}catch(e){}
+var st=window.setTimeout.bind(window);st(function(){try{window.requestAnimationFrame=function(){return 0};
+var h=st(function(){},0);for(var i=0;i<=h;i++){clearTimeout(i);clearInterval(i)}
+document.querySelectorAll("audio,video").forEach(function(m){try{m.pause()}catch(e){}});}catch(e){}
+try{parent.postMessage({liveReady:${JSON.stringify(g.repo)}},"*")}catch(e){}},${LIVE_FREEZE_MS});})();<\/script>`;
+  const h = g.html || "";
+  return /<head[^>]*>/i.test(h) ? h.replace(/<head[^>]*>/i, m => m + guard) : guard + h;
+}
+function mountLive(el, g){
+  if(!g.html || el.querySelector(".live")) return;
+  const wrap = document.createElement("div"); wrap.className = "live";
+  const f = document.createElement("iframe");
+  const fit = () => { const s = el.clientWidth / LIVE_W; f.style.width = LIVE_W + "px"; f.style.height = Math.ceil(el.clientHeight / s) + "px"; f.style.transform = `scale(${s})`; };
+  f.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  f.setAttribute("tabindex", "-1"); f.setAttribute("aria-hidden", "true"); f.title = "";
+  f.srcdoc = liveDoc(g);
+  wrap.appendChild(f); el.prepend(wrap); fit();
+  const lo = document.createElement("span"); lo.className = "loading"; lo.textContent = "첫 화면 불러오는 중…"; el.appendChild(lo);
+  if(window.ResizeObserver) new ResizeObserver(fit).observe(el);
+  const show = () => { if(wrap.classList.contains("on")) return; wrap.classList.add("on"); lo.remove(); el.querySelectorAll(".emoji,.tt").forEach(x => x.remove()); };
+  wrap._show = show;
+  f.addEventListener("load", () => setTimeout(show, LIVE_FREEZE_MS + 800));
+}
+addEventListener("message", e => {
+  const r = e.data && e.data.liveReady; if(!r) return;
+  document.querySelectorAll(`[data-thumb="${CSS.escape(r)}"] .live`).forEach(w => { const f = w.querySelector("iframe"); if(f && f.contentWindow === e.source && w._show) w._show(); });
+});
 
 /* ---------- 플레이어 ---------- */
 function openGame(repo, push = true){
@@ -515,6 +571,9 @@ $("#ppClose").onclick = () => closeGame();
 $("#ppInfoBtn").onclick = () => { $("#ppInfo").hidden = !$("#ppInfo").hidden; };
 $("#ppFull").onclick = () => { const s = $("#ppStage"); (s.requestFullscreen || s.webkitRequestFullscreen || (()=>{})).call(s); };
 $("#player").addEventListener("click", e => { if(e.target.id === "player") closeGame(); });
+document.addEventListener("keydown", e => {
+  if((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".card[data-play]")){ e.preventDefault(); openGame(e.target.dataset.play); }
+});
 addEventListener("keydown", e => { if(e.key !== "Escape" || document.fullscreenElement) return; if($("#rvPop").classList.contains("open")) closeReview(false); else closeGame(); });
 addEventListener("popstate", () => { const m = /^#play\/(.+)$/.exec(location.hash); if(m) openGame(m[1], false); else closeGame(true); });
 
@@ -648,9 +707,8 @@ $("#burger").onclick = () => toggleMenu();
   /* 썸네일(thumbnail.png)이 있으면 바꿔 끼워요 */
   S.games.forEach(g => {
     const img = new Image();
-    img.onload = () => { g.thumb = img.src; document.querySelectorAll(`[data-thumb="${g.repo}"]`).forEach(el => {
-      if(el.querySelector("img")) return; el.querySelectorAll(".emoji,.tt").forEach(x => x.remove());
-      const i = document.createElement("img"); i.src = img.src; i.alt = ""; el.prepend(i); }); };
+    img.onload = () => { g.thumb = img.src; applyThumbs(); };
+    img.onerror = () => { if(g.playable && g.html){ g.live = true; applyThumbs(); } };
     img.src = `${BASE}/${g.repo}/thumbnail.png?t=${Math.floor(Date.now()/3600000)}`;
   });
   const m = /^#play\/(.+)$/.exec(location.hash); if(m) openGame(m[1], false);
