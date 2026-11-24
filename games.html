@@ -189,8 +189,12 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 
 /* ---------- QR로 들어온 게임 (?game=game-01) ---------- */
 #focusWrap{padding-top:22px;padding-bottom:26px}
-.focus{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;background:#fff;border-radius:20px;padding:20px;box-shadow:0 6px 24px rgba(28,25,64,.10)}
-.focus .thumb{border-radius:14px;aspect-ratio:4/3}
+.focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.focus{display:flex;flex-direction:column;gap:16px;background:#fff;border-radius:20px;padding:20px;box-shadow:0 6px 24px rgba(28,25,64,.10)}
+.focus .thumb{border-radius:14px;aspect-ratio:16/10}
+.f-info{display:flex;flex-direction:column;flex:1}
+.f-info .f-play,.f-info .f-wip{margin-top:auto}
+.f-info .f-desc{margin-bottom:16px}
 .focus .thumb .tt{font-size:26px}
 .focus .thumb .emoji{font-size:90px}
 .f-kicker{display:inline-flex;align-items:center;gap:6px;background:#fff1e8;color:#c2410c;border-radius:999px;padding:4px 12px;font-weight:800;font-size:13px}
@@ -209,10 +213,11 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .more-banner span{font-size:26px;animation:bob 1.6s ease-in-out infinite}
 .more-banner small{display:block;font-weight:500;color:#cfcbf5;font-size:13px}
 /* 모바일 + QR: 이 게임 하나만 */
-body.focus-mode .hero,body.solo .menu,body.solo .search,body.solo .burger,body.solo .mobile-menu,body.solo .hero,body.solo main .layout,body.solo .more-banner,body.solo footer a,body.solo footer br{display:none!important}
-body.solo .focus{grid-template-columns:1fr;padding:14px;gap:14px}
+body.solo .menu,body.solo .search,body.solo .burger,body.solo .mobile-menu,body.solo .hero,body.solo main .layout,body.solo .more-banner,body.solo footer a,body.solo footer br{display:none!important}
+body.solo .focus-grid{grid-template-columns:1fr}
+body.solo .focus{padding:14px;gap:14px}
 body.solo #focusWrap{padding-top:14px}
-@media (max-width:760px){.focus{grid-template-columns:1fr;padding:14px;gap:14px}}
+@media (max-width:760px){#focusWrap .sec-head .more{display:none}.focus-grid{grid-template-columns:1fr}.focus{padding:14px;gap:14px}}
 footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
 footer a{color:#fff;font-weight:700}
 
@@ -396,10 +401,12 @@ const stars = a => a ? `★ ${a.avg.toFixed(1)} <span style="color:#999;font-wei
 
 const S = { games:[], genre:"전체", q:"", reviews:[] };
 /* QR 주소: games.html?game=game-01 → 그 게임을 맨 위에 크게. 휴대폰이면 그 게임만 보여요 */
-const FOCUS = (() => { const v = new URLSearchParams(location.search).get("game") || ""; return /^game-\d{2}$/.test(v) ? v : ""; })();
+/* 📌 맨 위에 보여 줄 게임 — 휴대폰(QR)으로 들어오면 이 게임들만 보여요. PC에서는 이 게임들 아래에 나머지 게임이 이어져요.
+   바꾸려면 아래 목록만 고치세요. 비워 두면([]) 원래처럼 모든 게임이 보여요. */
+const FEATURED = ["game-01", "game-02"];
+const FOCUS_LIST = FEATURED.filter(r => /^game-\d{2}$/.test(r));
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)) || (matchMedia("(pointer:coarse)").matches && innerWidth < 900);
-const SOLO = !!FOCUS && IS_MOBILE;
-if(FOCUS) document.body.classList.add("focus-mode");
+const SOLO = FOCUS_LIST.length > 0 && IS_MOBILE;
 if(SOLO) document.body.classList.add("solo");
 
 /* 기획서에서 "한 문장 소개" 꺼내기 */
@@ -481,7 +488,7 @@ function matches(g){
   return okG && okQ;
 }
 function render(){
-  const rest = S.games.filter(g => g.repo !== FOCUS);
+  const rest = S.games.filter(g => !FOCUS_LIST.includes(g.repo));
   const play = rest.filter(g => g.playable), wip = rest.filter(g => !g.playable);
 
   /* 인기: 평균 별점 → 소감 수 → 최근 업데이트 */
@@ -504,7 +511,7 @@ function render(){
 
   /* 통계 */
   const vers = S.games.reduce((n, g) => n + g.rels.length, 0);
-  $("#stats").innerHTML = `<div class="stat"><b>${play.length}</b>플레이 가능</div><div class="stat"><b>${vers}</b>누적 버전</div><div class="stat"><b>${S.reviews.length}</b>플레이 소감</div>`;
+  $("#stats").innerHTML = `<div class="stat"><b>${S.games.filter(g => g.playable).length}</b>플레이 가능</div><div class="stat"><b>${vers}</b>누적 버전</div><div class="stat"><b>${S.reviews.length}</b>플레이 소감</div>`;
 
   /* 최근 소감 */
   const rv = S.reviews.slice(0, 5);
@@ -572,17 +579,12 @@ addEventListener("message", e => {
 });
 
 /* ---------- 플레이어 ---------- */
-function renderFocus(){
-  const box = $("#focusWrap"); if(!FOCUS) return;
-  const g = S.games.find(x => x.repo === FOCUS);
-  if(!g){ box.hidden = false; box.innerHTML = `<div class="focus"><div><h1>게임을 찾을 수 없어요</h1><p class="f-meta">QR 주소를 다시 확인해 주세요.</p></div></div>`; return; }
+function focusCard(g){
   const avg = rating(g.repo);
   const ctr = (g.controls || []).map(c => `<li><b style="display:inline;color:inherit">${esc(c[0])}</b> — ${esc(c[1])}</li>`).join("");
-  document.title = `${g.title} · 온고 게임 아카이브`;
-  box.hidden = false;
-  box.innerHTML = `<div class="focus">
+  return `<div class="focus">
     ${thumbHTML(g)}
-    <div>
+    <div class="f-info">
       <span class="f-kicker">🎮 ${g.playable ? "AI게임" : "만드는 중"}${g.genre ? " · " + esc(g.genre) : ""}</span>
       <h1>${esc(g.title)}</h1>
       <div class="f-meta"><span>👤 ${esc(g.who)}의 게임</span>${g.ver && g.playable ? `<span>🛠 ${esc(g.ver)}</span>` : ""}${avg ? `<span class="st">${stars(avg)}</span>` : ""}</div>
@@ -592,15 +594,23 @@ function renderFocus(){
         ${ctr ? `<div><b>🕹 조작법</b><ul>${ctr}</ul></div>` : ""}
       </div>
       ${g.playable
-        ? `<button class="f-play" type="button" data-play="${esc(g.repo)}">▶ 지금 플레이하기</button><span class="f-sub">플레이하고 소감을 남기면 🍪 간식을 받을 수 있어요!</span>`
+        ? `<button class="f-play" type="button" data-play="${esc(g.repo)}">▶ 지금 플레이하기</button>`
         : `<div class="f-wip">🛠 아직 열심히 만드는 중이에요.<br>조금만 기다려 주세요!</div>`}
     </div>
-  </div>
+  </div>`;
+}
+function renderFocus(){
+  const box = $("#focusWrap"); if(!FOCUS_LIST.length) return;
+  const list = FOCUS_LIST.map(r => S.games.find(x => x.repo === r)).filter(Boolean);
+  if(!list.length) return;
+  box.hidden = false;
+  box.innerHTML = `<div class="sec-head"><h2>🎮 지금 플레이해 보세요</h2><span class="more">플레이하고 소감을 남기면 🍪 간식!</span></div>
+  <div class="focus-grid">${list.map(focusCard).join("")}</div>
   ${SOLO ? "" : `<div class="more-banner"><span>👇</span><div>아래의 게임도 플레이할 수 있어요!<small>온고 게임제작반 친구들이 만든 다른 게임도 둘러보세요.</small></div></div>`}`;
   applyThumbs();
 }
 function openGame(repo, push = true){
-  if(SOLO && repo !== FOCUS) return;
+  if(SOLO && !FOCUS_LIST.includes(repo)) return;
   const g = S.games.find(x => x.repo === repo && x.playable); if(!g) return;
   const avg = rating(g.repo);
   $("#ppTitle").innerHTML = `${g.emoji} ${esc(g.title)}<small>${esc(g.who)} · ${esc(g.ver)}${avg ? " · ★" + avg.avg.toFixed(1) : ""}</small>`;
@@ -764,7 +774,7 @@ $("#burger").onclick = () => toggleMenu();
   const gameWeeks = new Set(((wk && wk.weeks) || []).filter(w => w.game).map(w => w.week));
   const recs = (sub && sub.records) || [];
   S.games = await Promise.all(students.map(st => loadGame(st, recs, gameWeeks)));
-  if(FOCUS){ $("#popular .sec-head h2").textContent = "🔥 다른 인기 게임"; $("#all .sec-head h2").textContent = "🎮 다른 게임 모두 보기"; }
+  if(FOCUS_LIST.length){ $("#popular .sec-head h2").textContent = "🔥 다른 인기 게임"; $("#all .sec-head h2").textContent = "🎮 다른 게임 모두 보기"; }
   try{ if(window.Reviews) S.reviews = await Reviews.all(); }catch(_){}
   render(); renderFocus();
   /* 썸네일(thumbnail.png)이 있으면 바꿔 끼워요 */
