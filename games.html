@@ -187,6 +187,32 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:.9;animation:fall 2.4s ease-in forwards}
 @keyframes fall{to{transform:translateY(420px) rotate(540deg);opacity:0}}
 
+/* ---------- QR로 들어온 게임 (?game=game-01) ---------- */
+#focusWrap{padding-top:22px;padding-bottom:26px}
+.focus{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;background:#fff;border-radius:20px;padding:20px;box-shadow:0 6px 24px rgba(28,25,64,.10)}
+.focus .thumb{border-radius:14px;aspect-ratio:4/3}
+.focus .thumb .tt{font-size:26px}
+.focus .thumb .emoji{font-size:90px}
+.f-kicker{display:inline-flex;align-items:center;gap:6px;background:#fff1e8;color:#c2410c;border-radius:999px;padding:4px 12px;font-weight:800;font-size:13px}
+.focus h1{margin:10px 0 4px;font-size:clamp(22px,3vw,30px);font-weight:900;letter-spacing:-.8px;line-height:1.25;word-break:keep-all}
+.f-meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--sub);font-size:14px}
+.f-meta .st{color:#f59e0b;font-weight:800}
+.f-desc{margin:14px 0 0;display:grid;gap:8px;font-size:14.5px;line-height:1.55}
+.f-desc div{background:#f7f7fb;border-radius:12px;padding:10px 14px}
+.f-desc b{display:block;font-size:12.5px;color:#6258d8;margin-bottom:2px}
+.f-desc ul{margin:0;padding-left:18px}
+.f-play{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:16px;border:0;border-radius:16px;padding:16px;font-size:19px;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--accent),var(--pink));box-shadow:0 8px 22px rgba(255,79,163,.35);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.02);box-shadow:0 10px 28px rgba(255,79,163,.5)}}
+.f-sub{display:block;text-align:center;margin-top:10px;font-size:13.5px;color:var(--sub);font-weight:600}
+.f-wip{margin-top:16px;background:#f5f4ff;border-radius:14px;padding:16px;text-align:center;color:#3b3690;font-weight:700}
+.more-banner{margin:26px 0 0;display:flex;align-items:center;gap:12px;background:var(--head);color:#fff;border-radius:16px;padding:14px 18px;font-weight:800;font-size:16px}
+.more-banner span{font-size:26px;animation:bob 1.6s ease-in-out infinite}
+.more-banner small{display:block;font-weight:500;color:#cfcbf5;font-size:13px}
+/* 모바일 + QR: 이 게임 하나만 */
+body.focus-mode .hero,body.solo .menu,body.solo .search,body.solo .burger,body.solo .mobile-menu,body.solo .hero,body.solo main .layout,body.solo .more-banner{display:none!important}
+body.solo .focus{grid-template-columns:1fr;padding:14px;gap:14px}
+body.solo #focusWrap{padding-top:14px}
+@media (max-width:760px){.focus{grid-template-columns:1fr;padding:14px;gap:14px}}
 footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
 footer a{color:#fff;font-weight:700}
 
@@ -265,6 +291,7 @@ footer a{color:#fff;font-weight:700}
 </section>
 
 <main>
+  <div class="wrap" id="focusWrap" hidden></div>
   <div class="wrap layout">
     <div>
       <section class="block" id="popular">
@@ -368,6 +395,12 @@ const ago = iso => { if(!iso) return ""; const d = (Date.now() - new Date(iso)) 
 const stars = a => a ? `★ ${a.avg.toFixed(1)} <span style="color:#999;font-weight:500">(${a.n})</span>` : "";
 
 const S = { games:[], genre:"전체", q:"", reviews:[] };
+/* QR 주소: games.html?game=game-01 → 그 게임을 맨 위에 크게. 휴대폰이면 그 게임만 보여요 */
+const FOCUS = (() => { const v = new URLSearchParams(location.search).get("game") || ""; return /^game-\d{2}$/.test(v) ? v : ""; })();
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)) || (matchMedia("(pointer:coarse)").matches && innerWidth < 900);
+const SOLO = !!FOCUS && IS_MOBILE;
+if(FOCUS) document.body.classList.add("focus-mode");
+if(SOLO) document.body.classList.add("solo");
 
 /* 기획서에서 "한 문장 소개" 꺼내기 */
 function planIntro(md){
@@ -448,7 +481,8 @@ function matches(g){
   return okG && okQ;
 }
 function render(){
-  const play = S.games.filter(g => g.playable), wip = S.games.filter(g => !g.playable);
+  const rest = S.games.filter(g => g.repo !== FOCUS);
+  const play = rest.filter(g => g.playable), wip = rest.filter(g => !g.playable);
 
   /* 인기: 평균 별점 → 소감 수 → 최근 업데이트 */
   const pop = [...play].sort((a,b) => {
@@ -538,7 +572,35 @@ addEventListener("message", e => {
 });
 
 /* ---------- 플레이어 ---------- */
+function renderFocus(){
+  const box = $("#focusWrap"); if(!FOCUS) return;
+  const g = S.games.find(x => x.repo === FOCUS);
+  if(!g){ box.hidden = false; box.innerHTML = `<div class="focus"><div><h1>게임을 찾을 수 없어요</h1><p class="f-meta">QR 주소를 다시 확인해 주세요.</p></div></div>`; return; }
+  const avg = rating(g.repo);
+  const ctr = (g.controls || []).map(c => `<li><b style="display:inline;color:inherit">${esc(c[0])}</b> — ${esc(c[1])}</li>`).join("");
+  document.title = `${g.title} · 온고 게임 아카이브`;
+  box.hidden = false;
+  box.innerHTML = `<div class="focus">
+    ${thumbHTML(g)}
+    <div>
+      <span class="f-kicker">🎮 ${g.playable ? "AI게임" : "만드는 중"}${g.genre ? " · " + esc(g.genre) : ""}</span>
+      <h1>${esc(g.title)}</h1>
+      <div class="f-meta"><span>👤 ${esc(g.who)}의 게임</span>${g.ver && g.playable ? `<span>🛠 ${esc(g.ver)}</span>` : ""}${avg ? `<span class="st">${stars(avg)}</span>` : ""}</div>
+      <div class="f-desc">
+        ${g.intro ? `<div><b>어떤 게임인가요?</b>${esc(g.intro)}</div>` : ""}
+        ${g.goal ? `<div><b>🏆 목표</b>${esc(g.goal)}</div>` : ""}
+        ${ctr ? `<div><b>🕹 조작법</b><ul>${ctr}</ul></div>` : ""}
+      </div>
+      ${g.playable
+        ? `<button class="f-play" type="button" data-play="${esc(g.repo)}">▶ 지금 플레이하기</button><span class="f-sub">플레이하고 소감을 남기면 🍪 간식을 받을 수 있어요!</span>`
+        : `<div class="f-wip">🛠 아직 열심히 만드는 중이에요.<br>조금만 기다려 주세요!</div>`}
+    </div>
+  </div>
+  ${SOLO ? "" : `<div class="more-banner"><span>👇</span><div>아래의 게임도 플레이할 수 있어요!<small>온고 게임제작반 친구들이 만든 다른 게임도 둘러보세요.</small></div></div>`}`;
+  applyThumbs();
+}
 function openGame(repo, push = true){
+  if(SOLO && repo !== FOCUS) return;
   const g = S.games.find(x => x.repo === repo && x.playable); if(!g) return;
   const avg = rating(g.repo);
   $("#ppTitle").innerHTML = `${g.emoji} ${esc(g.title)}<small>${esc(g.who)} · ${esc(g.ver)}${avg ? " · ★" + avg.avg.toFixed(1) : ""}</small>`;
@@ -634,7 +696,7 @@ async function sendReview(){
     const row = await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", nick:name, stars:RP.stars, good, idea });
     if(Reviews.saveId) Reviews.saveId({ from, nick:name }); ss.set("rpDone:" + RP.repo, "1");
     showThanks(g, name, RP.stars, row);
-    try{ S.reviews = await Reviews.all(); render(); }catch(_){}
+    try{ S.reviews = await Reviews.all(); render(); renderFocus(); }catch(_){}
   }catch(e){ err(e.message || "올리지 못했어요. 잠시 뒤 다시 해 주세요."); btn.disabled = false; }
 }
 
@@ -702,8 +764,9 @@ $("#burger").onclick = () => toggleMenu();
   const gameWeeks = new Set(((wk && wk.weeks) || []).filter(w => w.game).map(w => w.week));
   const recs = (sub && sub.records) || [];
   S.games = await Promise.all(students.map(st => loadGame(st, recs, gameWeeks)));
+  if(FOCUS){ $("#popular .sec-head h2").textContent = "🔥 다른 인기 게임"; $("#all .sec-head h2").textContent = "🎮 다른 게임 모두 보기"; }
   try{ if(window.Reviews) S.reviews = await Reviews.all(); }catch(_){}
-  render();
+  render(); renderFocus();
   /* 썸네일(thumbnail.png)이 있으면 바꿔 끼워요 */
   S.games.forEach(g => {
     const img = new Image();
