@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-24T05:09:53.969Z",
+  "updated": "2026-11-24T16:00:31.017Z",
   "records": [
     {
       "repo": "game-01",
@@ -102,6 +102,39 @@
       "recorded_at": "2026-11-24T05:09:51.858Z"
     },
     {
+      "repo": "game-01",
+      "tag": "week5-v4",
+      "week": 5,
+      "version": 4,
+      "published_at": "2026-11-24T05:20:18Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week5-v4",
+      "name": "5주차 v4 제출",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n### ✨ 새로 추가\n- 대기 시간이 10초 이하인 참을성 없는 손님이 오면 말풍선에 '⚡빨리 주세요!' 안내 문구가 표시됨\n- 손님의 인내심이 50% 이상 남았을 때 빠르게 서빙하면 기본 금액(250원)에 보너스 팁 50원을 더해 총 300원을 받음\n- 손님의 인내심이 20% 미만 남았을 때 늦게 서빙하면 손님이 화를 내며 반값(125원)만 지불함\n### 🔧 바뀐 점\n- 전체 제한 시간이 120초에서 60초로 줄어듦\n- 클리어 목표 금액이 1,000원에서 2,500원으로 상향됨 (별 2개: 3,500원, 별 3개: 4,500원)\n- 손님 한 명이 기다려주는 대기 시간이 20초 고정에서 8초~15초 사이 랜덤으로 바뀜\n- 음료 서빙 시 무조건 250원만 받던 방식에서 남은 인내심 비율(50% 이상 / 20~50% / 20% 미만)에 따라 손님 표정과 수입(300원 / 250원 / 125원)이 달라지도록 바뀜\n- 인내심 게이지 색깔이 처음에는 초록색(50% 이상)이었다가 시간이 줄어들수록 주황색(20~50%)을 거쳐 빨간색(20% 미만)으로 변하도록 바뀜\n### ⚠️ 아직 남은 문제\n- 게임 화면이 800×600 고정 크기라 모바일이나 작은 화면 크기에 맞게 자동으로 줄어들지 않음\n",
+      "recorded_at": "2026-11-24T16:00:28.256Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week5-v5",
+      "week": 5,
+      "version": 5,
+      "published_at": "2026-11-24T05:24:30Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week5-v5",
+      "name": "5주차 v5 제출 · 완성 게임 ver3 (Antigravity)",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n### ✨ 새로 추가\n- 대기 시간이 10초 이하인 참을성 없는 손님이 오면 말풍선에 '⚡빨리 주세요!' 안내 문구가 표시됨\n- 손님의 인내심이 50% 이상 남았을 때 빠르게 서빙하면 기본 금액(250원)에 보너스 팁 50원을 더해 총 300원을 받음\n- 손님의 인내심이 20% 미만 남았을 때 늦게 서빙하면 손님이 화를 내며 반값(125원)만 지불함\n### 🔧 바뀐 점\n- 전체 제한 시간이 120초에서 60초로 줄어듦\n- 클리어 목표 금액이 1,000원에서 2,500원으로 상향됨 (별 2개: 3,500원, 별 3개: 4,500원)\n- 손님 한 명이 기다려주는 대기 시간이 20초 고정에서 8초~15초 사이 랜덤으로 바뀜\n- 음료 서빙 시 무조건 250원만 받던 방식에서 남은 인내심 비율(50% 이상 / 20~50% / 20% 미만)에 따라 손님 표정과 수입(300원 / 250원 / 125원)이 달라지도록 바뀜\n- 인내심 게이지 색깔이 처음에는 초록색(50% 이상)이었다가 시간이 줄어들수록 주황색(20~50%)을 거쳐 빨간색(20% 미만)으로 변하도록 바뀜\n### ⚠️ 아직 남은 문제\n- 게임 화면이 800×600 고정 크기라 모바일이나 작은 화면 크기에 맞게 자동으로 줄어들지 않음\n",
+      "recorded_at": "2026-11-24T16:00:28.256Z"
+    },
+    {
+      "repo": "game-01",
+      "tag": "week5-v6",
+      "week": 5,
+      "version": 6,
+      "published_at": "2026-11-24T05:24:42Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-01/releases/tag/week5-v6",
+      "name": "5주차 v6 제출 · 완성 게임 ver4 (Antigravity)",
+      "notes": "## 🛠 패치노트 · 게임 ver4\n### ✨ 새로 추가\n- 대기 시간이 10초 이하인 참을성 없는 손님이 오면 말풍선에 '⚡빨리 주세요!' 안내 문구가 표시됨\n- 손님의 인내심이 50% 이상 남았을 때 빠르게 서빙하면 기본 금액(250원)에 보너스 팁 50원을 더해 총 300원을 받음\n- 손님의 인내심이 20% 미만 남았을 때 늦게 서빙하면 손님이 화를 내며 반값(125원)만 지불함\n### 🔧 바뀐 점\n- 전체 제한 시간이 120초에서 60초로 줄어듦\n- 클리어 목표 금액이 1,000원에서 2,500원으로 상향됨 (별 2개: 3,500원, 별 3개: 4,500원)\n- 손님 한 명이 기다려주는 대기 시간이 20초 고정에서 8초~15초 사이 랜덤으로 바뀜\n- 음료 서빙 시 무조건 250원만 받던 방식에서 남은 인내심 비율(50% 이상 / 20~50% / 20% 미만)에 따라 손님 표정과 수입(300원 / 250원 / 125원)이 달라지도록 바뀜\n- 인내심 게이지 색깔이 처음에는 초록색(50% 이상)이었다가 시간이 줄어들수록 주황색(20~50%)을 거쳐 빨간색(20% 미만)으로 변하도록 바뀜\n### ⚠️ 아직 남은 문제\n- 게임 화면이 800×600 고정 크기라 모바일이나 작은 화면 크기에 맞게 자동으로 줄어들지 않음\n",
+      "recorded_at": "2026-11-24T16:00:28.256Z"
+    },
+    {
       "repo": "game-02",
       "tag": "week2-v1",
       "week": 2,
@@ -120,6 +153,61 @@
       "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week3-v1",
       "notes": "## 📝 제출 메모\n- 이번에 쓴 내용: \n- 선생님께 질문: ",
       "recorded_at": "2026-11-10T09:37:27.020Z"
+    },
+    {
+      "repo": "game-02",
+      "tag": "week5-v1",
+      "week": 5,
+      "version": 1,
+      "published_at": "2026-11-24T06:24:41Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week5-v1",
+      "name": "5주차 v1 제출 · 완성 게임 ver3",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.585Z"
+    },
+    {
+      "repo": "game-02",
+      "tag": "week5-v2",
+      "week": 5,
+      "version": 2,
+      "published_at": "2026-11-24T06:41:02Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week5-v2",
+      "name": "5주차 v2 제출 · 완성 게임 ver3 (Gemini)",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.585Z"
+    },
+    {
+      "repo": "game-02",
+      "tag": "week5-v3",
+      "week": 5,
+      "version": 3,
+      "published_at": "2026-11-24T06:42:01Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week5-v3",
+      "name": "5주차 v3 제출",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.585Z"
+    },
+    {
+      "repo": "game-02",
+      "tag": "week5-v4",
+      "week": 5,
+      "version": 4,
+      "published_at": "2026-11-24T06:42:04Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week5-v4",
+      "name": "5주차 v4 제출 · 완성 게임 ver4 (Antigravity)",
+      "notes": "## 🛠 패치노트 · 게임 ver4\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.585Z"
+    },
+    {
+      "repo": "game-02",
+      "tag": "week5-v5",
+      "week": 5,
+      "version": 5,
+      "published_at": "2026-11-24T06:49:49Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-02/releases/tag/week5-v5",
+      "name": "5주차 v5 제출",
+      "notes": "## 🛠 패치노트 · 게임 ver4\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.584Z"
     },
     {
       "repo": "game-03",
@@ -170,6 +258,50 @@
       "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week5-v1",
       "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
       "recorded_at": "2026-11-24T05:09:52.419Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week5-v2",
+      "week": 5,
+      "version": 2,
+      "published_at": "2026-11-24T06:10:44Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week5-v2",
+      "name": "5주차 v2 제출 · 완성 게임 ver3",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.978Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week5-v3",
+      "week": 5,
+      "version": 3,
+      "published_at": "2026-11-24T06:13:21Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week5-v3",
+      "name": "5주차 v3 제출 · 완성 게임 ver4",
+      "notes": "## 🛠 패치노트 · 게임 ver4\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.978Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week5-v4",
+      "week": 5,
+      "version": 4,
+      "published_at": "2026-11-24T06:51:19Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week5-v4",
+      "name": "5주차 v4 제출 · 완성 게임 ver3 (Gemini)",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.978Z"
+    },
+    {
+      "repo": "game-03",
+      "tag": "week5-v5",
+      "week": 5,
+      "version": 5,
+      "published_at": "2026-11-24T06:51:40Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-03/releases/tag/week5-v5",
+      "name": "5주차 v5 제출",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-24T16:00:28.978Z"
     },
     {
       "repo": "game-04",
