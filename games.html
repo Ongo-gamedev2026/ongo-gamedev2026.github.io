@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>온고 게임 아카이브 · 2026 게임제작반</title>
+<meta name="description" content="온고 게임제작반 학생들이 AI와 함께 만든 웹 게임을 한곳에서 플레이해요.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://ongo-gamedev2026.github.io/review.js"></script>
+<style>
+:root{
+  --bg:#eef0f4; --card:#fff; --ink:#15151c; --sub:#6b6f7a; --line:#e2e4ea;
+  --head:#1c1940; --head2:#2a2560; --accent:#ff6b1a; --accent2:#ffb703; --cyan:#3ee6ff; --pink:#ff4fa3;
+  --radius:14px; --wrap:1200px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit}
+button{cursor:pointer}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 20px}
+.skip{position:absolute;left:-999px;top:0;background:#fff;padding:8px 12px;z-index:100}
+.skip:focus{left:8px}
+
+/* ---------- header ---------- */
+header.top{position:sticky;top:0;z-index:30;background:var(--head);color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.top-row{display:flex;align-items:center;gap:16px;height:62px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;letter-spacing:-.3px;white-space:nowrap}
+.logo .mark{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--pink));font-size:19px}
+.logo small{display:block;font-size:11.5px;font-weight:600;color:#b9b4ea;letter-spacing:0;margin-top:-2px}
+.menu{display:flex;gap:2px;margin-left:12px}
+.menu a{padding:8px 13px;border-radius:9px;font-weight:700;font-size:14.5px;color:#dcd9ff;white-space:nowrap}
+.menu a:hover,.menu a.on{background:var(--head2);color:#fff}
+.search{margin-left:auto;display:flex;align-items:center;background:#fff;border-radius:999px;padding:0 6px 0 14px;height:38px;width:min(300px,34vw)}
+.search input{border:0;outline:0;flex:1;min-width:0;background:none;font-size:14.5px;color:var(--ink)}
+.search button{border:0;background:var(--accent);color:#fff;border-radius:999px;width:30px;height:30px;display:grid;place-items:center;font-size:14px}
+.burger{display:none;margin-left:auto;border:0;background:var(--head2);color:#fff;border-radius:9px;width:40px;height:38px;font-size:18px}
+.mobile-menu{display:none;border-top:1px solid #322d6b;padding:10px 0 14px}
+.mobile-menu.open{display:block}
+.mobile-menu .search{width:100%;margin:0 0 10px}
+.mobile-menu nav{display:flex;flex-wrap:wrap;gap:6px}
+.mobile-menu nav a{padding:7px 12px;border-radius:999px;background:var(--head2);font-weight:700;font-size:14px}
+
+/* ---------- hero ---------- */
+.hero{background:radial-gradient(1200px 300px at 20% 0,#3a2f8f 0,transparent 60%),linear-gradient(180deg,var(--head2),#191637);color:#fff;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1fr auto;align-items:center;gap:24px;padding-top:34px;padding-bottom:38px}
+.hero h1{margin:0 0 8px;font-size:clamp(24px,3.6vw,38px);font-weight:900;letter-spacing:-1px;line-height:1.2}
+.hero h1 b{background:linear-gradient(90deg,var(--accent2),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin:0;color:#cfcbf5;font-size:clamp(14px,1.6vw,16px)}
+.stats{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.stat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 14px;font-size:13px;color:#cfcbf5}
+.stat b{display:block;font-size:20px;color:#fff;font-weight:900;line-height:1.2}
+.hero-art{font-size:clamp(60px,9vw,110px);line-height:1;filter:drop-shadow(0 8px 24px rgba(0,0,0,.4));animation:bob 3s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-4deg)}}
+
+/* ---------- layout ---------- */
+main{padding:26px 0 40px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}
+section.block{margin-bottom:34px}
+.sec-head{display:flex;align-items:center;gap:10px;margin:0 0 14px;border-bottom:3px solid var(--head);padding-bottom:8px}
+.sec-head h2{margin:0;font-size:20px;font-weight:900;letter-spacing:-.4px}
+.sec-head .more{margin-left:auto;font-size:13.5px;color:var(--sub);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 13px;font-size:13.5px;font-weight:700;color:#444}
+.chip.on{background:var(--head);border-color:var(--head);color:#fff}
+.chip i{font-style:normal;opacity:.6;margin-left:4px;font-weight:600}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.grid.big{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;cursor:pointer;border:0;padding:0;text-align:left;color:inherit;width:100%}
+.card:hover,.card:focus-visible{transform:translateY(-3px);box-shadow:0 10px 24px rgba(28,25,64,.16);outline:none}
+.thumb{position:relative;aspect-ratio:276/200;overflow:hidden;display:flex;align-items:flex-end;padding:14px 16px;color:#fff}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.thumb .emoji{position:absolute;right:10px;bottom:2px;font-size:62px;opacity:.95;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
+.thumb .tt{position:relative;font-weight:900;font-size:19px;line-height:1.2;letter-spacing:-.5px;max-width:72%;text-shadow:0 2px 8px rgba(0,0,0,.25)}
+.thumb .play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,12,40,.45);opacity:0;transition:opacity .15s}
+.thumb .play span{background:#fff;color:var(--head);border-radius:999px;padding:8px 16px;font-weight:900;font-size:14px}
+.card:hover .play,.card:focus-visible .play{opacity:1}
+.tag-ver{position:absolute;top:10px;left:10px;z-index:1;background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+.tag-new{position:absolute;top:10px;right:10px;z-index:1;background:var(--pink);color:#fff;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:900}
+.tag-ag{position:absolute;bottom:10px;left:10px;z-index:1;background:rgba(62,230,255,.92);color:#0d0b1e;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800}
+.card-body{padding:11px 14px 13px;display:flex;flex-direction:column;gap:3px;flex:1}
+.card-title{font-weight:800;font-size:15px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-title .pre{color:#c2410c;font-weight:800}
+.card-intro{color:var(--sub);font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-meta{display:flex;flex-wrap:wrap;gap:4px 10px;color:#777;font-size:12.5px;margin-top:auto;padding-top:5px}
+.card-meta .st{color:#f59e0b;font-weight:800}
+.card.wip{cursor:default;opacity:.8}
+.card.wip:hover{transform:none;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card.wip .thumb{filter:grayscale(.65)}
+.empty{background:#fff;border-radius:var(--radius);padding:30px;text-align:center;color:var(--sub)}
+.skeleton .thumb{background:linear-gradient(90deg,#e7e9ee 0,#f4f5f8 50%,#e7e9ee 100%);background-size:200% 100%;animation:sh 1.2s infinite}
+.skeleton .card-body div{height:12px;border-radius:6px;background:#eceef2;margin:4px 0}
+@keyframes sh{to{background-position:-200% 0}}
+
+/* ---------- side ---------- */
+aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
+.box{background:#fff;border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.box h3{margin:0 0 10px;font-size:16px;font-weight:900;display:flex;align-items:center;gap:6px}
+.list{list-style:none;margin:0;padding:0}
+.list li{border-top:1px dashed var(--line);padding:8px 0;font-size:13.5px;line-height:1.45}
+.list li:first-child{border-top:0;padding-top:0}
+.list a,.list button{border:0;background:none;padding:0;text-align:left;color:inherit;font-weight:700}
+.list a:hover,.list button:hover{color:#c2410c;text-decoration:underline}
+.list .when{display:block;color:#999;font-size:12px;font-weight:500}
+.list .note{display:block;color:#666;font-size:12.5px;font-weight:500;margin-top:2px}
+.rank{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--head);color:#fff;font-size:12px;font-weight:900;margin-right:6px}
+.rank.r1{background:#f59e0b}.rank.r2{background:#94a3b8}.rank.r3{background:#c2763b}
+.cloud{display:flex;flex-wrap:wrap;gap:6px}
+.cloud button{border:0;background:#f1f0fb;color:#3b3690;border-radius:8px;padding:4px 10px;font-weight:700}
+.cloud button:hover{background:var(--head);color:#fff}
+
+/* ---------- modal ---------- */
+#player{position:fixed;inset:0;z-index:80;background:rgba(8,6,24,.78);display:none;place-items:center;padding:16px}
+#player.open{display:grid}
+.pp{width:min(1100px,100%);height:min(90vh,860px);background:#0d0b1e;border:3px solid #e9ecff;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.pp-top{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;color:#fff;background:#1b1838;flex-wrap:wrap}
+.pp-top .ttl{font-weight:900;font-size:16px;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-top .ttl small{color:#a9a4e0;font-weight:600;margin-left:8px;font-size:13px}
+.pbtn{border:1px solid #3d3880;background:#26225a;color:#fff;border-radius:9px;padding:6px 11px;font-weight:700;font-size:13.5px;white-space:nowrap}
+.pbtn:hover{background:#3a3485}
+.pbtn.x{background:var(--pink);border-color:var(--pink)}
+.pp-stage{flex:1;position:relative;background:#000}
+.pp-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.pp-info{background:#14112d;color:#d6d3f7;padding:10px 16px;font-size:13.5px;display:flex;gap:6px 18px;flex-wrap:wrap;max-height:30vh;overflow:auto}
+.pp-info b{color:var(--cyan)}
+
+footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
+footer a{color:#fff;font-weight:700}
+
+/* ---------- responsive ---------- */
+@media (max-width:1024px){
+  .layout{grid-template-columns:1fr}
+  aside{position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+}
+@media (max-width:760px){
+  .menu,.top-row>.search{display:none}
+  .burger{display:block}
+  .hero .wrap{grid-template-columns:1fr;padding-top:24px;padding-bottom:26px}
+  .hero-art{display:none}
+  .grid,.grid.big{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .thumb .tt{font-size:15px}
+  .thumb .emoji{font-size:44px}
+  .card-intro{display:none}
+  .wrap{padding:0 14px}
+  #player{padding:0}
+  .pp{width:100%;height:100%;height:100dvh;border:0;border-radius:0}
+  .pbtn .lbl{display:none}
+}
+@media (max-width:380px){
+  .grid,.grid.big{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#all">본문 바로가기</a>
+
+<header class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <a class="logo" href="#"><span class="mark">🕹</span><span>온고 게임 아카이브<small>2026 게임제작반 · AI로 만든 게임</small></span></a>
+      <nav class="menu" aria-label="메뉴">
+        <a href="#popular">인기 게임</a>
+        <a href="#all">모든 게임</a>
+        <a href="#wip">준비 중</a>
+        <a href="https://ongo-gamedev2026.github.io/">제작반 홈 ↗</a>
+      </nav>
+      <form class="search" role="search" data-search>
+        <input type="search" placeholder="게임 이름·장르 검색" aria-label="게임 검색">
+        <button type="submit" aria-label="검색">🔍</button>
+      </form>
+      <button class="burger" id="burger" aria-label="메뉴 열기" aria-expanded="false">☰</button>
+    </div>
+    <div class="mobile-menu" id="mmenu">
+      <form class="search" role="search" data-search>
+        <input type="search" placeholder="게임 이름·장르 검색" aria-label="게임 검색">
+        <button type="submit" aria-label="검색">🔍</button>
+      </form>
+      <nav>
+        <a href="#popular">🔥 인기 게임</a>
+        <a href="#all">🎮 모든 게임</a>
+        <a href="#wip">⏳ 준비 중</a>
+        <a href="https://ongo-gamedev2026.github.io/">🏡 제작반 홈</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>우리가 기획하고 <b>AI와 함께 만든 게임</b></h1>
+      <p>온고 게임제작반 친구들이 기획서부터 직접 만든 웹 게임이에요. 카드를 누르면 바로 플레이할 수 있어요.</p>
+      <div class="stats" id="stats">
+        <div class="stat"><b>–</b>플레이 가능</div>
+        <div class="stat"><b>–</b>누적 버전</div>
+        <div class="stat"><b>–</b>플레이 소감</div>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">👾</div>
+  </div>
+</section>
+
+<main>
+  <div class="wrap layout">
+    <div>
+      <section class="block" id="popular">
+        <div class="sec-head"><h2>🔥 인기 게임</h2><span class="more">별점·소감 많은 순</span></div>
+        <div class="grid big" id="popGrid"></div>
+      </section>
+
+      <section class="block" id="all">
+        <div class="sec-head"><h2>🎮 모든 게임</h2><span class="more" id="allCount"></span></div>
+        <div class="chips" id="chips" role="tablist" aria-label="장르"></div>
+        <div class="grid" id="allGrid"></div>
+      </section>
+
+      <section class="block" id="wip">
+        <div class="sec-head"><h2>⏳ 만드는 중인 게임</h2><span class="more">곧 만나요!</span></div>
+        <div class="grid" id="wipGrid"></div>
+      </section>
+    </div>
+
+    <aside>
+      <div class="box">
+        <h3>💬 최근 플레이 소감</h3>
+        <ul class="list" id="rvList"><li>불러오는 중…</li></ul>
+      </div>
+      <div class="box">
+        <h3>🏷 태그</h3>
+        <div class="cloud" id="cloud"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    🎮 온고 게임제작반 2026 · 모든 게임은 학생들이 직접 기획하고 AI(Gemini · Antigravity)와 함께 만들었어요.<br>
+    <a href="https://ongo-gamedev2026.github.io/">제작반 사이트로 가기</a>
+  </div>
+</footer>
+
+<div id="player" role="dialog" aria-modal="true" aria-label="게임 플레이">
+  <div class="pp">
+    <div class="pp-top">
+      <div class="ttl" id="ppTitle"></div>
+      <button class="pbtn" id="ppFull" title="전체 화면">⛶ <span class="lbl">전체 화면</span></button>
+      <a class="pbtn" id="ppVer" target="_blank" rel="noopener" title="버전별 플레이·소감 남기기">💬 <span class="lbl">버전별·소감</span></a>
+      <button class="pbtn" id="ppInfoBtn" title="게임 설명">ℹ️ <span class="lbl">설명</span></button>
+      <button class="pbtn x" id="ppClose" title="닫기">✕ <span class="lbl">닫기</span></button>
+    </div>
+    <div class="pp-stage" id="ppStage"></div>
+    <div class="pp-info" id="ppInfo" hidden></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   🕹 온고 게임 아카이브
+   - 학생 목록(students.json)과 제출 기록(data/submissions.json)을 읽고,
+     각 학생 저장소에서 game.json · play/index.html · 기획서를 자동으로 읽어 와요.
+   - 새 게임이 올라오면 이 파일을 고치지 않아도 자동으로 보여요.
+   - 아래 EXTRA에서 장르·태그·이모지만 직접 정해 줄 수 있어요. (비워 둬도 돼요)
+   ================================================================ */
+const BASE = "https://ongo-gamedev2026.github.io";
+const ORG  = "Ongo-gamedev2026";
+const EXTRA = {
+  "game-01": { genre:"타이쿤",   emoji:"☕", tags:["카페","경영","마우스"] },
+  "game-02": { genre:"액션",     emoji:"🦆", tags:["오리","타격감"] },
+  "game-03": { genre:"디펜스",   emoji:"🏰", tags:["타워 디펜스","전략"] },
+  "game-04": { genre:"퍼즐",     emoji:"⏳", tags:["시간","분신","플랫포머"] },
+  "game-05": { genre:"점프",     emoji:"🦘", tags:["항아리류","고난도","포물선"] },
+  "game-06": { genre:"",         emoji:"🎲", tags:[] },
+  "game-07": { genre:"로그라이크", emoji:"🧙", tags:["마법","액션","던전"] },
+  "game-08": { genre:"덱빌딩",   emoji:"🃏", tags:["카드","로그라이크","턴제"] }
+};
+const PALETTE = [["#ff7a59","#ffb36b"],["#6c5ce7","#a29bfe"],["#00b894","#55efc4"],["#0984e3","#74b9ff"],["#e84393","#fd79a8"],["#2d3436","#636e72"],["#8e44ad","#c39bd3"],["#d35400","#f0b27a"]];
+const NEW_DAYS = 3;
+
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const RAW = (repo, ref, path) => `https://raw.githubusercontent.com/${ORG}/${repo}/${ref}/${path}?t=${Math.floor(Date.now()/60000)}`;
+const getJSON = u => fetch(u, {cache:"no-store"}).then(r => r.ok ? r.json() : null).catch(() => null);
+const getText = u => fetch(u, {cache:"no-store"}).then(r => r.ok ? r.text() : null).catch(() => null);
+const titleOf = html => { const m = /<title>([^<]*)<\/title>/i.exec(html || ""); return m ? m[1].trim() : ""; };
+const isPlaceholder = html => !html || html.length < 1500 || /게임 준비 중/.test(titleOf(html));
+const ago = iso => { if(!iso) return ""; const d = (Date.now() - new Date(iso)) / 864e5; if(d < 1/24) return "방금"; if(d < 1) return Math.floor(d*24) + "시간 전"; if(d < 7) return Math.floor(d) + "일 전"; const t = new Date(iso); return `${t.getMonth()+1}/${t.getDate()}`; };
+const stars = a => a ? `★ ${a.avg.toFixed(1)} <span style="color:#999;font-weight:500">(${a.n})</span>` : "";
+
+const S = { games:[], genre:"전체", q:"", reviews:[] };
+
+/* 기획서에서 "한 문장 소개" 꺼내기 */
+function planIntro(md){
+  if(!md) return "";
+  const m = /1️⃣[^\n]*\n[\s\S]*?\*\*답:\*\*[ \t]*([^\n]*)/.exec(md);
+  const t = m ? m[1].trim() : "";
+  return /^#|^>/.test(t) ? "" : t;
+}
+async function loadGame(st, recs, gameWeeks){
+  const repo = st.repo, ex = EXTRA[repo] || {};
+  const rels = recs.filter(r => r.repo === repo && gameWeeks.has(r.week)).sort((a,b) => b.published_at.localeCompare(a.published_at));
+  const [gj, html, plan3] = await Promise.all([
+    getJSON(RAW(repo, "main", "game.json")),
+    getText(RAW(repo, "main", "play/index.html")),
+    getText(RAW(repo, "main", "docs/week3-plan.md"))
+  ]);
+  let mode = "live", srcdoc = null, tag = null, playable = !isPlaceholder(html), pageTitle = titleOf(html);
+  if(!playable && rels.length){  /* 메인엔 없지만 제출 버전에 게임이 있으면 그걸 보여 줘요 */
+    for(const r of rels.slice(0, 3)){
+      const h = await getText(RAW(repo, r.tag, "play/index.html"));
+      if(!isPlaceholder(h)){ playable = true; mode = "tag"; srcdoc = h; tag = r.tag; pageTitle = titleOf(h); break; }
+    }
+  }
+  let intro = (gj && gj.intro) || planIntro(plan3);
+  if(!intro) intro = planIntro(await getText(RAW(repo, "main", "docs/week2-plan.md")));
+  const verMatch = rels.map(r => /ver(\d+)/i.exec(r.notes || "")).filter(Boolean).map(m => +m[1]);
+  const ver = (gj && gj.ver) || (verMatch.length ? "ver" + Math.max(...verMatch) : (playable ? "ver1" : ""));
+  const updated = [gj && gj.updated, rels[0] && rels[0].published_at].filter(Boolean).sort().pop() || "";
+  return {
+    st, repo, no: st.no, who: `학생 ${st.no}` + (st.nickname ? ` · ${st.nickname}` : ""),
+    title: (gj && gj.title) || (pageTitle && !/게임 준비 중/.test(pageTitle) ? pageTitle : "") || (playable ? "이름 없는 게임" : `학생 ${st.no}의 게임`),
+    intro, goal: gj && gj.goal, controls: (gj && gj.controls) || [],
+    genre: ex.genre || "", emoji: ex.emoji || "🎮", tags: ex.tags || [],
+    tool: (gj && gj.tool) || (rels.some(r => /Antigravity/i.test(r.name || "")) ? "Antigravity" : "Gemini"),
+    ver, updated, rels, playable, mode, srcdoc, tag,
+    thumb: null, color: PALETTE[(parseInt(st.no, 10) - 1 + PALETTE.length) % PALETTE.length]
+  };
+}
+
+/* ---------- 카드 ---------- */
+function thumbHTML(g){
+  const [a,b] = g.color;
+  const isNew = g.updated && (Date.now() - new Date(g.updated)) / 864e5 < NEW_DAYS;
+  return `<div class="thumb" data-thumb="${esc(g.repo)}" style="background:linear-gradient(135deg,${a},${b})">
+    ${g.thumb ? `<img src="${esc(g.thumb)}" alt="" loading="lazy">` : `<span class="emoji" aria-hidden="true">${g.emoji}</span><span class="tt">${esc(g.title)}</span>`}
+    ${g.ver && g.playable ? `<span class="tag-ver">${esc(g.ver)}</span>` : ""}
+    ${g.playable && isNew ? `<span class="tag-new">NEW</span>` : ""}
+    ${g.playable && /antigravity/i.test(g.tool) ? `<span class="tag-ag">🛸 Antigravity</span>` : ""}
+    ${g.playable ? `<span class="play"><span>▶ 플레이</span></span>` : ""}
+  </div>`;
+}
+function cardHTML(g){
+  const avg = rating(g.repo);
+  const pre = `[${g.playable ? "AI게임" : "준비 중"}${g.genre ? "/" + g.genre : ""}]`;
+  const tagName = g.playable ? "button" : "div";
+  return `<${tagName} class="card${g.playable ? "" : " wip"}" ${g.playable ? `type="button" data-play="${esc(g.repo)}" aria-label="${esc(g.title)} 플레이"` : ""}>
+    ${thumbHTML(g)}
+    <div class="card-body">
+      <div class="card-title"><span class="pre">${esc(pre)}</span> ${esc(g.title)}</div>
+      ${g.intro ? `<div class="card-intro">${esc(g.intro)}</div>` : ""}
+      <div class="card-meta"><span>👤 ${esc(g.who)}</span>${avg ? `<span class="st">${stars(avg)}</span>` : ""}${g.updated && g.playable ? `<span>🕒 ${ago(g.updated)}</span>` : ""}</div>
+    </div>
+  </${tagName}>`;
+}
+const skel = n => Array.from({length:n}, () => `<div class="card skeleton"><div class="thumb"></div><div class="card-body"><div></div><div style="width:60%"></div></div></div>`).join("");
+
+/* ---------- 별점 ---------- */
+function rating(repo){
+  if(!window.Reviews || !S.reviews.length) return null;
+  return Reviews.average(Reviews.received(S.reviews, repo));
+}
+
+/* ---------- 그리기 ---------- */
+function matches(g){
+  const q = S.q.trim().toLowerCase();
+  const okG = S.genre === "전체" || g.genre === S.genre || g.tags.includes(S.genre);
+  const okQ = !q || [g.title, g.intro, g.genre, g.who, ...g.tags].join(" ").toLowerCase().includes(q);
+  return okG && okQ;
+}
+function render(){
+  const play = S.games.filter(g => g.playable), wip = S.games.filter(g => !g.playable);
+
+  /* 인기: 평균 별점 → 소감 수 → 최근 업데이트 */
+  const pop = [...play].sort((a,b) => {
+    const ra = rating(a.repo), rb = rating(b.repo);
+    return ((rb?.avg||0) - (ra?.avg||0)) || ((rb?.n||0) - (ra?.n||0)) || (b.updated||"").localeCompare(a.updated||"");
+  }).slice(0, 3);
+  $("#popGrid").innerHTML = pop.map(cardHTML).join("") || `<div class="empty">아직 플레이할 수 있는 게임이 없어요.</div>`;
+
+  /* 장르 칩 */
+  const genres = ["전체", ...new Set(play.map(g => g.genre).filter(Boolean))];
+  $("#chips").innerHTML = genres.map(x => `<button class="chip${S.genre===x?" on":""}" role="tab" aria-selected="${S.genre===x}" data-genre="${esc(x)}">${esc(x)}<i>${x==="전체" ? play.length : play.filter(g => g.genre===x).length}</i></button>`).join("");
+
+  const list = play.filter(matches).sort((a,b) => a.no.localeCompare(b.no));
+  $("#allGrid").innerHTML = list.map(cardHTML).join("") || `<div class="empty">'${esc(S.q || S.genre)}'에 맞는 게임이 없어요.</div>`;
+  $("#allCount").textContent = (S.q || S.genre !== "전체") ? `${list.length}개 찾음` : `${play.length}개`;
+
+  $("#wip").hidden = !wip.length;
+  $("#wipGrid").innerHTML = wip.map(cardHTML).join("");
+
+  /* 통계 */
+  const vers = S.games.reduce((n, g) => n + g.rels.length, 0);
+  $("#stats").innerHTML = `<div class="stat"><b>${play.length}</b>플레이 가능</div><div class="stat"><b>${vers}</b>누적 버전</div><div class="stat"><b>${S.reviews.length}</b>플레이 소감</div>`;
+
+  /* 최근 소감 */
+  const rv = S.reviews.slice(0, 5);
+  $("#rvList").innerHTML = rv.map(x => {
+    const g = S.games.find(g => g.repo === x.to);
+    return `<li>${g && g.playable ? `<button data-play="${esc(g.repo)}">${esc(g.title)}</button>` : esc(x.to)} <span class="st" style="color:#f59e0b">${"★".repeat(x.stars||0)}</span>
+      <span class="note">${esc((x.good || x.idea || "").slice(0, 60))}</span><span class="when">${esc(x.name)} · ${ago(x.at)}</span></li>`;
+  }).join("") || "<li>첫 소감을 남겨 주세요! 게임 화면의 💬 버튼을 눌러요.</li>";
+
+  /* 태그 */
+  const tags = [...new Set(play.flatMap(g => [g.genre, ...g.tags]).filter(Boolean))];
+  $("#cloud").innerHTML = tags.map(t => `<button data-tag="${esc(t)}">#${esc(t)}</button>`).join("");
+}
+
+/* ---------- 플레이어 ---------- */
+function openGame(repo, push = true){
+  const g = S.games.find(x => x.repo === repo && x.playable); if(!g) return;
+  const avg = rating(g.repo);
+  $("#ppTitle").innerHTML = `${g.emoji} ${esc(g.title)}<small>${esc(g.who)} · ${esc(g.ver)}${avg ? " · ★" + avg.avg.toFixed(1) : ""}</small>`;
+  $("#ppVer").href = `${BASE}/${g.repo}/versions.html${g.tag ? "?v=" + encodeURIComponent(g.tag) : ""}`;
+  const f = document.createElement("iframe");
+  f.title = g.title; f.allow = "fullscreen; gamepad; autoplay";
+  f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups");
+  if(g.mode === "tag") f.srcdoc = g.srcdoc; else f.src = `${BASE}/${g.repo}/play/`;
+  $("#ppStage").replaceChildren(f);
+  const ctr = g.controls.map(c => `${esc(c[0])} — ${esc(c[1])}`).join(" / ");
+  $("#ppInfo").innerHTML = [g.intro && `<span><b>소개</b> ${esc(g.intro)}</span>`, g.goal && `<span><b>목표</b> ${esc(g.goal)}</span>`, ctr && `<span><b>조작</b> ${ctr}</span>`].filter(Boolean).join("") || "<span>설명이 아직 없어요.</span>";
+  $("#ppInfo").hidden = window.innerWidth < 760;
+  $("#player").classList.add("open");
+  document.body.style.overflow = "hidden";
+  if(push) history.pushState({play:repo}, "", "#play/" + repo);
+  setTimeout(() => f.focus(), 300);
+}
+function closeGame(fromPop){
+  if(!$("#player").classList.contains("open")) return;
+  $("#player").classList.remove("open");
+  $("#ppStage").replaceChildren();
+  document.body.style.overflow = "";
+  if(document.fullscreenElement) document.exitFullscreen?.();
+  if(!fromPop && location.hash.startsWith("#play/")) history.back();
+}
+$("#ppClose").onclick = () => closeGame();
+$("#ppInfoBtn").onclick = () => { $("#ppInfo").hidden = !$("#ppInfo").hidden; };
+$("#ppFull").onclick = () => { const s = $("#ppStage"); (s.requestFullscreen || s.webkitRequestFullscreen || (()=>{})).call(s); };
+$("#player").addEventListener("click", e => { if(e.target.id === "player") closeGame(); });
+addEventListener("keydown", e => { if(e.key === "Escape" && !document.fullscreenElement) closeGame(); });
+addEventListener("popstate", () => { const m = /^#play\/(.+)$/.exec(location.hash); if(m) openGame(m[1], false); else closeGame(true); });
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener("click", e => {
+  const p = e.target.closest("[data-play]"); if(p){ e.preventDefault(); openGame(p.dataset.play); return; }
+  const gch = e.target.closest("[data-genre]"); if(gch){ S.genre = gch.dataset.genre; render(); return; }
+  const t = e.target.closest("[data-tag]"); if(t){ S.q = ""; document.querySelectorAll("[data-search] input").forEach(i => i.value = ""); S.genre = t.dataset.tag; render(); $("#all").scrollIntoView({behavior:"smooth"}); return; }
+  if(e.target.closest(".mobile-menu nav a")) toggleMenu(false);
+});
+document.querySelectorAll("[data-search]").forEach(f => {
+  const inp = f.querySelector("input");
+  f.addEventListener("submit", e => { e.preventDefault(); S.q = inp.value; S.genre = "전체"; render(); toggleMenu(false); $("#all").scrollIntoView({behavior:"smooth"}); });
+  inp.addEventListener("input", () => { S.q = inp.value; render(); });
+});
+function toggleMenu(open){ const m = $("#mmenu"); open = open ?? !m.classList.contains("open"); m.classList.toggle("open", open); $("#burger").setAttribute("aria-expanded", open); }
+$("#burger").onclick = () => toggleMenu();
+
+/* ---------- 시작 ---------- */
+(async function start(){
+  $("#popGrid").innerHTML = skel(3); $("#allGrid").innerHTML = skel(6);
+  const [stu, wk, sub] = await Promise.all([
+    getJSON(`${BASE}/students.json?t=${Date.now()}`),
+    getJSON(`${BASE}/weeks.json?t=${Date.now()}`),
+    getJSON(`${BASE}/data/submissions.json?t=${Date.now()}`)
+  ]);
+  const students = (stu && stu.students) || [];
+  const gameWeeks = new Set(((wk && wk.weeks) || []).filter(w => w.game).map(w => w.week));
+  const recs = (sub && sub.records) || [];
+  S.games = await Promise.all(students.map(st => loadGame(st, recs, gameWeeks)));
+  try{ if(window.Reviews) S.reviews = await Reviews.all(); }catch(_){}
+  render();
+  /* 썸네일(thumbnail.png)이 있으면 바꿔 끼워요 */
+  S.games.forEach(g => {
+    const img = new Image();
+    img.onload = () => { g.thumb = img.src; document.querySelectorAll(`[data-thumb="${g.repo}"]`).forEach(el => {
+      if(el.querySelector("img")) return; el.querySelectorAll(".emoji,.tt").forEach(x => x.remove());
+      const i = document.createElement("img"); i.src = img.src; i.alt = ""; el.prepend(i); }); };
+    img.src = `${BASE}/${g.repo}/thumbnail.png?t=${Math.floor(Date.now()/3600000)}`;
+  });
+  const m = /^#play\/(.+)$/.exec(location.hash); if(m) openGame(m[1], false);
+})();
+</script>
+</body>
+</html>
