@@ -170,5 +170,9 @@ function mount(box, gameRepo){
   init().then(() => draw(true));
 }
 
-window.Reviews = { mount, all, received, given, average, who, init, starTxt, getKey };
+/* 다른 화면(게임 아카이브 팝업 등)에서 소감 올리기 */
+const submit = a => rpc("submit_review", { p_game:a.game, p_from:a.from, p_ver:a.ver || "", p_student_id:a.sid, p_name:a.name,
+  p_stars:a.stars, p_fun:String(a.good || "").slice(0, MAX), p_wish:String(a.idea || "").slice(0, MAX) });
+
+window.Reviews = { mount, all, received, given, average, who, init, starTxt, getKey, submit };
 })();
