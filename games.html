@@ -159,6 +159,30 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .rp-done div{font-size:54px}
 @media (max-width:440px){.rp-id{grid-template-columns:1fr}}
 
+/* ---------- 소감 완료 · 간식 교환권 ---------- */
+.rp-thanks{position:relative;overflow:hidden;text-align:center;padding:26px 22px 22px;word-break:keep-all}
+.rp-thanks .big{font-size:64px;line-height:1;animation:hop .9s ease-in-out infinite alternate}
+@keyframes hop{to{transform:translateY(-6px) rotate(6deg)}}
+.rp-thanks h4{margin:10px 0 4px;font-size:21px;font-weight:900;letter-spacing:-.5px}
+.rp-thanks h4 b{color:var(--accent)}
+.rp-thanks>p{margin:0;color:var(--sub);font-size:14px}
+.coupon{position:relative;margin:18px 0 0;border-radius:16px;background:linear-gradient(135deg,#fff7ed,#ffe8d6);border:2px dashed #fb923c;padding:16px 24px;text-align:left}
+.coupon::before,.coupon::after{content:"";position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:#fff;border:2px dashed #fb923c}
+.coupon::before{left:-13px;border-left-color:transparent;border-bottom-color:transparent;transform:rotate(45deg)}
+.coupon::after{right:-13px;border-right-color:transparent;border-top-color:transparent;transform:rotate(45deg)}
+.coupon .ch{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.coupon .ch b{font-size:17px;font-weight:900;color:#c2410c}
+.coupon .code{font-family:ui-monospace,Menlo,monospace;font-weight:900;font-size:15px;background:#c2410c;color:#fff;border-radius:8px;padding:3px 9px;letter-spacing:1px}
+.coupon dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:10px 0 0;font-size:13.5px}
+.coupon dt{color:#9a5a2f;font-weight:700}
+.coupon dd{margin:0;font-weight:700;color:#3b2414;overflow-wrap:anywhere}
+.snack-how{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:#f5f4ff;text-align:left;font-size:13.5px;line-height:1.6;color:#2e2a63}
+.snack-how b{color:var(--head)}
+.snack-how ol{margin:4px 0 0;padding-left:20px}
+.confetti{position:absolute;inset:0;pointer-events:none}
+.confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:.9;animation:fall 2.4s ease-in forwards}
+@keyframes fall{to{transform:translateY(420px) rotate(540deg);opacity:0}}
+
 footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
 footer a{color:#fff;font-weight:700}
 
@@ -323,6 +347,11 @@ const EXTRA = {
 };
 const PALETTE = [["#ff7a59","#ffb36b"],["#6c5ce7","#a29bfe"],["#00b894","#55efc4"],["#0984e3","#74b9ff"],["#e84393","#fd79a8"],["#2d3436","#636e72"],["#8e44ad","#c39bd3"],["#d35400","#f0b27a"]];
 const NEW_DAYS = 3;
+/* 🍪 소감을 올린 뒤 보여 줄 간식 안내 — 장소·방법이 정해지면 여기만 고치세요 */
+const SNACK = {
+  title: "간식 교환권",
+  how: ["이 화면을 캡처하거나 그대로 켜 두세요.", "게임제작반 선생님(부스)께 보여 주세요.", "간식을 받아 가면 끝! 맛있게 먹어요 😋"]
+};
 
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -543,11 +572,41 @@ async function sendReview(){
   if(idea.length < 5) return err("💡 추가되면 좋을 요소를 한 문장 이상 써 주세요.");
   btn.disabled = true; msg.textContent = "올리는 중…"; msg.className = "rp-msg";
   try{
-    await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", nick:name, stars:RP.stars, good, idea });
+    const row = await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", nick:name, stars:RP.stars, good, idea });
     if(Reviews.saveId) Reviews.saveId({ from, nick:name }); ss.set("rpDone:" + RP.repo, "1");
-    $("#rpBody").innerHTML = `<div class="rp-done"><div>🎉</div><b>소감을 올렸어요. 고마워요!</b><p class="rp-tip">친구가 게임을 고칠 때 큰 도움이 돼요.</p><div class="rp-row"><button class="rp-send" type="button" data-rp-later>닫기</button></div></div>`;
+    showThanks(g, name, RP.stars, row);
     try{ S.reviews = await Reviews.all(); render(); }catch(_){}
   }catch(e){ err(e.message || "올리지 못했어요. 잠시 뒤 다시 해 주세요."); btn.disabled = false; }
+}
+
+/* 소감 완료 → 고마워요 + 간식 교환권 */
+function showThanks(g, nick, stars, row){
+  const id = String((row && row.id) || Math.random().toString(16).slice(2)).replace(/-/g, "");
+  const code = id.slice(0, 4).toUpperCase();
+  const t = new Date((row && row.created_at) || Date.now());
+  const when = `${t.getMonth()+1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, "0")}`;
+  const colors = ["#ff6b1a","#ffb703","#ff4fa3","#3ee6ff","#6c5ce7","#16a34a"];
+  const conf = Array.from({length:28}, (_, i) => `<i style="left:${Math.random()*100}%;background:${colors[i % colors.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s"></i>`).join("");
+  $("#rpTitle").textContent = "🎉 소감 고마워요!";
+  $("#rpSub").textContent = "만든 친구에게 정말 큰 힘이 돼요.";
+  $("#rpBody").innerHTML = `<div class="rp-thanks">
+    <div class="confetti" aria-hidden="true">${conf}</div>
+    <div class="big" aria-hidden="true">🍪</div>
+    <h4><b>${esc(nick)}</b>님, 소감을 올려 줘서 고마워요!</h4>
+    <p>보답으로 작은 간식을 준비했어요. 아래 교환권을 받아 가세요.</p>
+    <div class="coupon">
+      <div class="ch"><b>🎁 ${esc(SNACK.title)}</b><span class="code">#${esc(code)}</span></div>
+      <dl>
+        <dt>닉네임</dt><dd>${esc(nick)}</dd>
+        <dt>플레이한 게임</dt><dd>${esc(g ? g.title : "")}</dd>
+        <dt>남긴 별점</dt><dd style="color:#f59e0b">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</dd>
+        <dt>올린 시각</dt><dd>${esc(when)}</dd>
+      </dl>
+    </div>
+    <div class="snack-how"><b>🍬 간식 받는 방법</b><ol>${SNACK.how.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>
+    <div class="rp-row"><button class="rp-send" type="button" data-rp-later>확인했어요</button></div>
+  </div>`;
+  $("#rvPop .rp").scrollTop = 0;
 }
 $("#rvPop").addEventListener("click", e => {
   if(e.target.id === "rvPop") return closeReview(false);
