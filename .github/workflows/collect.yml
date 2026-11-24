@@ -2,7 +2,7 @@ name: 제출 기록 모으기
 
 on:
   schedule:
-    - cron: "7 * * * *"   # 매시 7분마다
+    - cron: "7,22,37,52 * * * *"   # 15분마다 (GitHub가 가끔 건너뛰어서 자주 확인해요)
   workflow_dispatch:       # Actions 화면에서 "Run workflow"로 바로 실행
 
 permissions:

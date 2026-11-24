@@ -35,7 +35,7 @@
 처음 한 번은 조직 설정에서 fine-grained 토큰을 허용해야 할 수 있어요: **조직 Settings → Personal access tokens → Settings → Allow access via fine-grained personal access tokens**. '승인 필요'로 두면 만든 열쇠를 **Pending requests**에서 승인해야 써져요.
 
 ## 제출 기록
-- `.github/workflows/collect.yml`이 매시간 학생 저장소의 릴리스(`week2-v1` 형식)를 확인해요.
+- `.github/workflows/collect.yml`이 15분마다 학생 저장소의 릴리스(`week2-v1` 형식)를 확인해요.
 - 바로 반영하려면 **Actions → 제출 기록 모으기 → Run workflow**를 누르세요.
 
 ## 출력할 때 이름·학번 넣기
