@@ -1,9 +1,9 @@
 /* 💬 플레이 소감
    소감은 Supabase(ongo-gamedev2026 프로젝트)의 reviews 표에 저장해요. 열쇠(코드)가 필요 없어요.
-   - 받는 정보: 내 게임 번호(from_repo), 학번, 이름, 별점(1~5), 재미있던 요소(fun), 추가되면 좋을 요소(wish)
-   - 학번·이름은 선생님만 Supabase 화면(Table Editor → reviews)에서 볼 수 있어요.
-     사이트에는 학번을 내보내지 않고, 이름은 가려서(김*수) 보여 줘요. (list_reviews 함수)
-   - 쓰기는 submit_review 함수로만 돼요. 고치기·지우기는 선생님이 Supabase 화면에서 해요.
+   - 받는 정보: 닉네임, 제작반 학생이면 내 게임 번호(from_repo, 선택), 별점(1~5), 재미있던 요소(fun), 추가되면 좋을 요소(wish)
+   - 학교 밖 사람도 남길 수 있게 학번·이름 대신 닉네임을 받아요. 닉네임은 그대로 보여요.
+     (예전 학번·이름 소감은 이름을 가려서(김*수) 보여 줘요. list_reviews 함수)
+   - 쓰기는 submit_review_nick 함수로만 돼요. 고치기·지우기는 선생님이 Supabase 화면에서 해요.
    - versions.html: Reviews.mount(상자, 게임 저장소)
    - 작성하기(5주차): Reviews.all() / received() / given() / average() */
 (function(){
@@ -17,6 +17,10 @@ const fmt = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.ge
 const who = repo => { const s = (R.students || []).find(x => x.repo === repo); return s ? `학생 ${s.no}` + (s.nickname ? ` · ${s.nickname}` : "") : (repo || ""); };
 const starTxt = n => "★".repeat(n) + "☆".repeat(5 - n);
 /* 예전 코드와 맞추려고 남겨 둔 함수 (소감에는 더 이상 열쇠가 필요 없어요) */
+/* 같은 기기에서 쓴 소감을 묶는 임의 번호 (개인정보 아님) */
+function clientId(){ try{ let c = localStorage.getItem("rvClient"); if(!c){ c = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem("rvClient", c); } return c; }catch(_){ return ""; } }
+function savedId(){ try{ return JSON.parse(localStorage.getItem("rvNick") || "{}"); }catch(_){ return {}; } }
+function saveId(o){ try{ localStorage.setItem("rvNick", JSON.stringify(o)); }catch(_){} }
 function getKey(repo){ try{ return sessionStorage.getItem("ghkey:" + repo) || localStorage.getItem("ghkey:" + repo) || ""; }catch(_){ return ""; } }
 
 /* ---------- Supabase ---------- */
@@ -71,7 +75,7 @@ const RV_CSS = `
 .rv-lbl{display:block;font-weight:700;font-size:14px;margin:10px 0 4px}.rv-lbl span{font-weight:400;color:var(--muted,#9a96c8);font-size:13px}
 .rv textarea,.rv input,.rv select{font:inherit;font-size:14.5px;width:100%;background:#0d0b1e;color:var(--text,#ecebff);border:1px solid var(--line,#2e2a63);padding:8px 10px;border-radius:0;box-sizing:border-box}
 .rv textarea{resize:vertical;min-height:58px}
-.rv-id{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.rv-id .rv-lbl{margin-top:6px}
+.rv-id{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rv-id .rv-lbl{margin-top:6px}
 .rv-stars{display:flex;gap:2px}.rv-stars button{font-size:28px;line-height:1;background:none;border:0;color:#4a4680;cursor:pointer;padding:0 2px}.rv-stars button.on{color:#ffd166}
 .rv-btn{font:inherit;font-size:14px;font-weight:700;cursor:pointer;background:var(--pink,#ff4fa3);color:#0d0b1e;border:0;padding:8px 16px}
 .rv-btn:disabled{opacity:.6;cursor:default}
@@ -91,17 +95,16 @@ const RV_CSS = `
 function mount(box, gameRepo){
   if(!document.getElementById("rvCss")){ const s = document.createElement("style"); s.id = "rvCss"; s.textContent = RV_CSS; document.head.appendChild(s); }
   const st = { stars:0, A:null, sent:false };
-  const saved = (() => { try{ return JSON.parse(sessionStorage.getItem("rvId") || "{}"); }catch(_){ return {}; } })();
+  const saved = savedId();
 
   function formHtml(){
     const opts = (R.students || []).map(s => `<option value="${esc(s.repo)}"${s.repo === saved.from ? " selected" : ""}>${esc(who(s.repo))}</option>`).join("");
     return `<div class="rv-box form">
       <div style="font-weight:800">✍️ 플레이 소감 남기기</div>
-      <p class="rv-tip">학번과 이름은 선생님만 볼 수 있어요. 다른 친구에게는 이름 가운데가 가려져서(예: 김*수) 보여요.</p>
+      <p class="rv-tip">누구나 남길 수 있어요. 닉네임 그대로 보이니 실명은 쓰지 마세요.</p>
       <div class="rv-id">
-        <div><label class="rv-lbl" for="rvFrom">🎮 내 게임 번호</label><select id="rvFrom" data-from><option value="">골라요</option>${opts}</select></div>
-        <div><label class="rv-lbl" for="rvSid">🪪 학번</label><input id="rvSid" data-sid inputmode="numeric" maxlength="10" placeholder="예: 10101" autocomplete="off" value="${esc(saved.sid || "")}"></div>
-        <div><label class="rv-lbl" for="rvName">🙂 이름</label><input id="rvName" data-name maxlength="20" placeholder="예: 홍길동" autocomplete="off" value="${esc(saved.name || "")}"></div>
+        <div><label class="rv-lbl" for="rvName">🙂 닉네임</label><input id="rvName" data-name maxlength="20" placeholder="예: 게임왕" autocomplete="off" value="${esc(saved.nick || "")}"></div>
+        <div><label class="rv-lbl" for="rvFrom">🎮 제작반 학생이면 <span>(선택)</span></label><select id="rvFrom" data-from><option value="">제작반 학생이 아니에요</option>${opts}</select></div>
       </div>
       <label class="rv-lbl">⭐ 별점 <span>5점 만점 · 재미있었던 만큼</span></label>
       <div class="rv-stars">${[1,2,3,4,5].map(n => `<button type="button" data-star="${n}" aria-label="별 ${n}개">★</button>`).join("")}</div>
@@ -148,21 +151,18 @@ function mount(box, gameRepo){
     const msg = $("[data-msg]");
     if(st.sent){ msg.textContent = "✅ 소감을 올렸어요. 고마워요!"; msg.className = "rv-msg ok"; st.sent = false; }
     $("[data-send]").onclick = async () => {
-      const send = $("[data-send]"), from = $("[data-from]").value, sid = $("[data-sid]").value.replace(/\s/g, ""), name = $("[data-name]").value.trim();
+      const send = $("[data-send]"), from = $("[data-from]").value, name = $("[data-name]").value.trim();
       const good = $("[data-good]").value.trim(), idea = $("[data-idea]").value.trim();
       const err = t => { msg.textContent = t; msg.className = "rv-msg err"; };
-      if(!from) return err("🎮 내 게임 번호를 골라 주세요.");
-      if(from === gameRepo) return err("🙋 내 게임이에요! 내 게임에는 소감을 남길 수 없어요.");
-      if(!/^\d{3,10}$/.test(sid)) return err("🪪 학번을 숫자로 써 주세요.");
-      if(!name) return err("🙂 이름을 써 주세요.");
+      if(!name) return err("🙂 닉네임을 써 주세요.");
+      if(from && from === gameRepo) return err("🙋 내 게임이에요! 내 게임에는 소감을 남길 수 없어요.");
       if(!st.stars) return err("⭐ 별점을 골라 주세요.");
       if(good.length < 5) return err("👍 재미있던 요소를 한 문장 이상 써 주세요.");
       if(idea.length < 5) return err("💡 추가되면 좋을 요소를 한 문장 이상 써 주세요.");
       send.disabled = true; msg.textContent = "올리는 중…"; msg.className = "rv-msg";
       try{
-        const row = await rpc("submit_review", { p_game:gameRepo, p_from:from, p_ver:window.rvVersion || "", p_student_id:sid, p_name:name,
-          p_stars:st.stars, p_fun:good.slice(0, MAX), p_wish:idea.slice(0, MAX) });
-        try{ sessionStorage.setItem("rvId", JSON.stringify({ from, sid, name })); Object.assign(saved, { from, sid, name }); }catch(_){}
+        await submit({ game:gameRepo, from, ver:window.rvVersion || "", nick:name, stars:st.stars, good, idea });
+        saveId({ from, nick:name }); Object.assign(saved, { from, nick:name });
         st.stars = 0; st.sent = true; draw(true);
       }catch(e){ err(e.message); send.disabled = false; }
     };
@@ -171,8 +171,8 @@ function mount(box, gameRepo){
 }
 
 /* 다른 화면(게임 아카이브 팝업 등)에서 소감 올리기 */
-const submit = a => rpc("submit_review", { p_game:a.game, p_from:a.from, p_ver:a.ver || "", p_student_id:a.sid, p_name:a.name,
-  p_stars:a.stars, p_fun:String(a.good || "").slice(0, MAX), p_wish:String(a.idea || "").slice(0, MAX) });
+function submit(a){ return rpc("submit_review_nick", { p_game:a.game, p_from:a.from || "", p_ver:a.ver || "", p_nickname:a.nick,
+  p_stars:a.stars, p_fun:String(a.good || "").slice(0, MAX), p_wish:String(a.idea || "").slice(0, MAX), p_client:clientId() }); }
 
-window.Reviews = { mount, all, received, given, average, who, init, starTxt, getKey, submit };
+window.Reviews = { mount, all, received, given, average, who, init, starTxt, getKey, submit, savedId, saveId };
 })();

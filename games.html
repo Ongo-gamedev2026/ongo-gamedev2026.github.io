@@ -137,7 +137,7 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .rp-head p{margin:4px 0 0;color:#cfcbf5;font-size:13.5px}
 .rp-x{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.12);color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px}
 .rp-body{padding:16px 22px 20px}
-.rp-id{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}
+.rp-id{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rp label{display:block;font-weight:800;font-size:13.5px;margin:12px 0 4px}
 .rp label span{font-weight:500;color:var(--sub);font-size:12.5px;margin-left:4px}
 .rp-id label{margin-top:0}
@@ -157,7 +157,7 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .rp-msg.err{color:#dc2626}.rp-msg.ok{color:#16a34a;font-weight:700}
 .rp-done{text-align:center;padding:30px 22px}
 .rp-done div{font-size:54px}
-@media (max-width:520px){.rp-id{grid-template-columns:1fr 1fr}.rp-id>div:first-child{grid-column:1/-1}}
+@media (max-width:440px){.rp-id{grid-template-columns:1fr}}
 
 footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
 footer a{color:#fff;font-weight:700}
@@ -504,15 +504,14 @@ function maybeAskReview(repo, playedSec){
 function openReview(repo){
   const g = S.games.find(x => x.repo === repo); if(!g) return;
   RP.repo = repo; RP.stars = 0;
-  let saved = {}; try{ saved = JSON.parse(ss.get("rvId") || "{}"); }catch(_){}
+  const saved = Reviews.savedId ? Reviews.savedId() : {};
   $("#rpTitle").textContent = `${g.emoji} ${g.title}`;
   $("#rpSub").textContent = `${g.who}의 게임 · 재미있었나요? 소감을 남겨 주면 큰 힘이 돼요!`;
   const opts = S.games.map(x => `<option value="${esc(x.repo)}"${x.repo === saved.from ? " selected" : ""}>학생 ${esc(x.no)}${x.st.nickname ? " · " + esc(x.st.nickname) : ""}</option>`).join("");
   $("#rpBody").innerHTML = `
     <div class="rp-id">
-      <div><label for="rpFrom">🎮 내 게임 번호</label><select id="rpFrom"><option value="">골라요</option>${opts}</select></div>
-      <div><label for="rpSid">🪪 학번</label><input id="rpSid" inputmode="numeric" maxlength="10" placeholder="10101" autocomplete="off" value="${esc(saved.sid || "")}"></div>
-      <div><label for="rpName">🙂 이름</label><input id="rpName" maxlength="20" placeholder="홍길동" autocomplete="off" value="${esc(saved.name || "")}"></div>
+      <div><label for="rpName">🙂 닉네임</label><input id="rpName" maxlength="20" placeholder="예: 게임왕" autocomplete="off" value="${esc(saved.nick || "")}"></div>
+      <div><label for="rpFrom">🎮 제작반 학생이면<span>(선택)</span></label><select id="rpFrom"><option value="">제작반 학생이 아니에요</option>${opts}</select></div>
     </div>
     <label>⭐ 별점<span>재미있었던 만큼</span></label>
     <div class="rp-stars">${[1,2,3,4,5].map(n => `<button type="button" data-rp-star="${n}" aria-label="별 ${n}개">★</button>`).join("")}</div>
@@ -520,7 +519,7 @@ function openReview(repo){
     <textarea id="rpGood" maxlength="400" placeholder="예: 마지막 10초가 정말 긴장됐어요"></textarea>
     <label for="rpIdea">💡 추가되면 좋을 요소<span>무엇을, 어떻게</span></label>
     <textarea id="rpIdea" maxlength="400" placeholder="예: 시작 화면에 조작법 그림이 있으면 좋겠어요"></textarea>
-    <p class="rp-tip">🔒 학번·이름은 선생님만 봐요. 친구들에게는 이름 가운데가 가려져서(김*수) 보여요.</p>
+    <p class="rp-tip">🙌 누구나 남길 수 있어요. 닉네임은 그대로 보이니 실명은 쓰지 마세요.</p>
     <p class="rp-msg" id="rpMsg"></p>
     <div class="rp-row"><button class="rp-later" type="button" data-rp-later>다음에 할게요</button><button class="rp-send" type="button" id="rpSend">소감 올리기</button></div>`;
   $("#rvPop").classList.add("open");
@@ -534,20 +533,18 @@ function closeReview(skip){
 }
 async function sendReview(){
   const g = S.games.find(x => x.repo === RP.repo), msg = $("#rpMsg"), btn = $("#rpSend");
-  const from = $("#rpFrom").value, sid = $("#rpSid").value.replace(/\s/g, ""), name = $("#rpName").value.trim();
+  const from = $("#rpFrom").value, name = $("#rpName").value.trim();
   const good = $("#rpGood").value.trim(), idea = $("#rpIdea").value.trim();
   const err = t => { msg.textContent = t; msg.className = "rp-msg err"; };
-  if(!from) return err("🎮 내 게임 번호를 골라 주세요.");
-  if(from === RP.repo) return err("🙋 내 게임에는 소감을 남길 수 없어요.");
-  if(!/^\d{3,10}$/.test(sid)) return err("🪪 학번을 숫자로 써 주세요.");
-  if(!name) return err("🙂 이름을 써 주세요.");
+  if(!name) return err("🙂 닉네임을 써 주세요.");
+  if(from && from === RP.repo) return err("🙋 내 게임에는 소감을 남길 수 없어요.");
   if(!RP.stars) return err("⭐ 별점을 골라 주세요.");
   if(good.length < 5) return err("👍 재미있던 요소를 한 문장 이상 써 주세요.");
   if(idea.length < 5) return err("💡 추가되면 좋을 요소를 한 문장 이상 써 주세요.");
   btn.disabled = true; msg.textContent = "올리는 중…"; msg.className = "rp-msg";
   try{
-    await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", sid, name, stars:RP.stars, good, idea });
-    ss.set("rvId", JSON.stringify({ from, sid, name })); ss.set("rpDone:" + RP.repo, "1");
+    await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", nick:name, stars:RP.stars, good, idea });
+    if(Reviews.saveId) Reviews.saveId({ from, nick:name }); ss.set("rpDone:" + RP.repo, "1");
     $("#rpBody").innerHTML = `<div class="rp-done"><div>🎉</div><b>소감을 올렸어요. 고마워요!</b><p class="rp-tip">친구가 게임을 고칠 때 큰 도움이 돼요.</p><div class="rp-row"><button class="rp-send" type="button" data-rp-later>닫기</button></div></div>`;
     try{ S.reviews = await Reviews.all(); render(); }catch(_){}
   }catch(e){ err(e.message || "올리지 못했어요. 잠시 뒤 다시 해 주세요."); btn.disabled = false; }
