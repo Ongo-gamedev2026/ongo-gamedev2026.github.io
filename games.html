@@ -140,7 +140,7 @@ body.solo #ppVer{display:none}
 #rvPop.open{display:grid}
 .rp{width:min(520px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pop .18s ease-out}
 @keyframes pop{from{transform:scale(.94);opacity:0}}
-.rp-head{background:linear-gradient(135deg,var(--head2),var(--head));color:#fff;padding:18px 22px 16px;position:relative}
+.rp-head{background:linear-gradient(135deg,var(--head2),var(--head));color:#fff;padding:18px 58px 16px 22px;position:relative}
 .rp-head h3{margin:0;font-size:19px;font-weight:900}
 .rp-head p{margin:4px 0 0;color:#cfcbf5;font-size:13.5px}
 .rp-x{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.12);color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px}
@@ -221,6 +221,36 @@ body.solo .focus-grid{grid-template-columns:1fr}
 body.solo .focus{padding:14px;gap:14px}
 body.solo #focusWrap{padding-top:14px}
 @media (max-width:760px){#focusWrap .sec-head .more{display:none}.focus-grid{grid-template-columns:1fr}.focus{padding:14px;gap:14px}}
+/* ---------- ⭐ 소감 모아 보기 ---------- */
+.st-btn{border:0;background:none;padding:0;font:inherit;color:#f59e0b;font-weight:800;cursor:pointer;border-radius:6px}
+.st-btn:hover,.st-btn:focus-visible{text-decoration:underline;outline:none;background:#fff7e0}
+.st-btn .cnt{color:#999;font-weight:500}
+.st-btn .go{font-size:11.5px;color:#c2410c;font-weight:700;margin-left:3px}
+.pp-top .st-btn{color:#ffd166;font-size:13px}
+.pp-top .st-btn:hover{background:rgba(255,255,255,.08)}
+.st-empty{color:#aaa;font-weight:600}
+#rvView{position:fixed;inset:0;z-index:95;background:rgba(8,6,24,.6);display:none;place-items:center;padding:16px}
+#rvView.open{display:grid}
+.rv-sum{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--line)}
+.rv-avg{text-align:center}
+.rv-avg b{display:block;font-size:40px;font-weight:900;line-height:1;color:var(--ink)}
+.rv-avg span{color:#f59e0b;font-size:16px;letter-spacing:1px}
+.rv-avg small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+.rv-bars{display:grid;gap:4px;font-size:12.5px;color:var(--sub)}
+.rv-bars div{display:grid;grid-template-columns:22px 1fr 22px;gap:6px;align-items:center}
+.rv-bars i{display:block;height:8px;border-radius:99px;background:#eef0f4;overflow:hidden}
+.rv-bars i em{display:block;height:100%;background:#f59e0b;border-radius:99px}
+.rv-items{list-style:none;margin:0;padding:0}
+.rv-items li{padding:12px 0;border-bottom:1px dashed var(--line)}
+.rv-items li:last-child{border-bottom:0}
+.rv-who{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px;color:var(--sub)}
+.rv-who b{color:var(--ink);font-size:14px}
+.rv-who .s{color:#f59e0b;letter-spacing:1px}
+.rv-who .v{background:#f1f0fb;color:#3b3690;border-radius:6px;padding:0 6px;font-weight:700;font-size:11.5px}
+.rv-txt{margin:6px 0 0;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.rv-txt b{color:#6258d8;font-size:12.5px;margin-right:4px}
+.rv-none{text-align:center;color:var(--sub);padding:26px 0 10px}
+.rv-none div{font-size:44px}
 footer{background:var(--head);color:#a9a4e0;font-size:13px;padding:22px 0;text-align:center}
 footer a{color:#fff;font-weight:700}
 
@@ -337,6 +367,7 @@ footer a{color:#fff;font-weight:700}
   <div class="pp">
     <div class="pp-top">
       <div class="ttl" id="ppTitle"></div>
+      <span id="ppStars"></span>
       <button class="pbtn" id="ppFull" title="전체 화면">⛶ <span class="lbl">전체 화면</span></button>
       <button class="pbtn rv" id="ppReview" type="button" title="소감 남기기">💬 소감 남기기</button>
       <a class="pbtn" id="ppVer" target="_blank" rel="noopener" title="버전별 플레이">🗂 <span class="lbl">버전별</span></a>
@@ -356,6 +387,17 @@ footer a{color:#fff;font-weight:700}
       <button class="rp-x" type="button" data-rp-later aria-label="닫기">✕</button>
     </div>
     <div class="rp-body" id="rpBody"></div>
+  </div>
+</div>
+
+<div id="rvView" role="dialog" aria-modal="true" aria-labelledby="rvvTitle">
+  <div class="rp">
+    <div class="rp-head">
+      <h3 id="rvvTitle">⭐ 플레이 소감</h3>
+      <p id="rvvSub"></p>
+      <button class="rp-x" type="button" data-rvv-close aria-label="닫기">✕</button>
+    </div>
+    <div class="rp-body" id="rvvBody"></div>
   </div>
 </div>
 
@@ -395,6 +437,10 @@ const titleOf = html => { const m = /<title>([^<]*)<\/title>/i.exec(html || "");
 const isPlaceholder = html => !html || html.length < 1500 || /게임 준비 중/.test(titleOf(html));
 const ago = iso => { if(!iso) return ""; const d = (Date.now() - new Date(iso)) / 864e5; if(d < 1/24) return "방금"; if(d < 1) return Math.floor(d*24) + "시간 전"; if(d < 7) return Math.floor(d) + "일 전"; const t = new Date(iso); return `${t.getMonth()+1}/${t.getDate()}`; };
 const stars = a => a ? `★ ${a.avg.toFixed(1)} <span style="color:#999;font-weight:500">(${a.n})</span>` : "";
+/* ⭐ 누르면 소감 모아 보기 */
+const starBtn = (repo, a, more) => a
+  ? `<button type="button" class="st-btn" data-reviews="${esc(repo)}" aria-label="소감 ${a.n}개 보기">★ ${a.avg.toFixed(1)} <span class="cnt">(${a.n})</span>${more ? `<span class="go">소감 보기 ›</span>` : ""}</button>`
+  : "";
 
 const S = { games:[], genre:"전체", q:"", reviews:[] };
 /* QR 주소: games.html?game=game-01 → 그 게임을 맨 위에 크게. 휴대폰이면 그 게임만 보여요 */
@@ -467,7 +513,7 @@ function cardHTML(g){
     <div class="card-body">
       <div class="card-title"><span class="pre">${esc(pre)}</span> ${esc(g.title)}</div>
       ${g.intro ? `<div class="card-intro">${esc(g.intro)}</div>` : ""}
-      <div class="card-meta"><span>👤 ${esc(g.who)}</span>${avg ? `<span class="st">${stars(avg)}</span>` : ""}${g.updated && g.playable ? `<span>🕒 ${ago(g.updated)}</span>` : ""}</div>
+      <div class="card-meta"><span>👤 ${esc(g.who)}</span>${avg ? starBtn(g.repo, avg) : ""}${g.updated && g.playable ? `<span>🕒 ${ago(g.updated)}</span>` : ""}</div>
     </div>
   </${tagName}>`;
 }
@@ -580,7 +626,7 @@ function focusCard(g){
     <div class="f-info">
       <span class="f-kicker">🎮 ${g.playable ? "AI게임" : "만드는 중"}${g.genre ? " · " + esc(g.genre) : ""}</span>
       <h1>${esc(g.title)}</h1>
-      <div class="f-meta"><span>👤 ${esc(g.who)}의 게임</span>${g.ver && g.playable ? `<span>🛠 ${esc(g.ver)}</span>` : ""}${avg ? `<span class="st">${stars(avg)}</span>` : ""}</div>
+      <div class="f-meta"><span>👤 ${esc(g.who)}의 게임</span>${g.ver && g.playable ? `<span>🛠 ${esc(g.ver)}</span>` : ""}${avg ? starBtn(g.repo, avg, true) : (g.playable ? `<span class="st-empty">☆ 아직 소감이 없어요</span>` : "")}</div>
       <div class="f-desc">
         ${g.intro ? `<div><b>어떤 게임인가요?</b>${esc(g.intro)}</div>` : ""}
         ${g.goal ? `<div><b>🏆 목표</b>${esc(g.goal)}</div>` : ""}
@@ -607,7 +653,8 @@ function openGame(repo, push = true){
   if(SOLO && !FOCUS_LIST.includes(repo)) return;
   const g = S.games.find(x => x.repo === repo && x.playable); if(!g) return;
   const avg = rating(g.repo);
-  $("#ppTitle").innerHTML = `${g.emoji} ${esc(g.title)}<small>${esc(g.who)} · ${esc(g.ver)}${avg ? " · ★" + avg.avg.toFixed(1) : ""}</small>`;
+  $("#ppTitle").innerHTML = `${g.emoji} ${esc(g.title)}<small>${esc(g.who)} · ${esc(g.ver)}</small>`;
+  $("#ppStars").innerHTML = avg ? starBtn(g.repo, avg) : "";
   $("#ppVer").href = `${BASE}/${g.repo}/versions.html${g.tag ? "?v=" + encodeURIComponent(g.tag) : ""}`;
   const f = document.createElement("iframe");
   f.title = g.title; f.allow = "fullscreen; gamepad; autoplay";
@@ -665,7 +712,7 @@ $("#player").addEventListener("click", e => { if(e.target.id === "player") close
 document.addEventListener("keydown", e => {
   if((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".card[data-play]")){ e.preventDefault(); openGame(e.target.dataset.play); }
 });
-addEventListener("keydown", e => { if(e.key !== "Escape" || document.fullscreenElement) return; if($("#rvPop").classList.contains("open")) closeReview(false); else closeGame(); });
+addEventListener("keydown", e => { if(e.key !== "Escape" || document.fullscreenElement) return; if($("#rvView").classList.contains("open")) closeReviews(); else if($("#rvPop").classList.contains("open")) closeReview(false); else closeGame(); });
 addEventListener("popstate", () => { const m = /^#play\/(.+)$/.exec(location.hash); if(m) openGame(m[1], false); else closeGame(true); });
 
 
@@ -725,7 +772,8 @@ async function sendReview(){
     const row = await Reviews.submit({ game:RP.repo, from, ver:g ? g.ver : "", nick:name, stars:RP.stars, good, idea });
     if(Reviews.saveId) Reviews.saveId({ from, nick:name }); ss.set("rpDone:" + RP.repo, "1");
     showThanks(g, name, RP.stars, row);
-    try{ S.reviews = await Reviews.all(); render(); renderFocus(); }catch(_){}
+    try{ S.reviews = await Reviews.all(); render(); renderFocus();
+      if(S.playing){ const a = rating(S.playing.repo); $("#ppStars").innerHTML = a ? starBtn(S.playing.repo, a) : ""; } }catch(_){}
   }catch(e){ err(e.message || "올리지 못했어요. 잠시 뒤 다시 해 주세요."); btn.disabled = false; }
 }
 
@@ -759,8 +807,46 @@ $("#rvPop").addEventListener("click", e => {
   if(e.target.id === "rpSend") sendReview();
 });
 
+/* ---------- ⭐ 소감 모아 보기 ---------- */
+function openReviews(repo){
+  const g = S.games.find(x => x.repo === repo); if(!g) return;
+  const list = (window.Reviews ? Reviews.received(S.reviews, repo) : S.reviews.filter(r => r.to === repo))
+    .slice().sort((a,b) => String(b.at).localeCompare(String(a.at)));
+  const avg = rating(repo);
+  const latest = list.filter(r => r.latest && r.stars);
+  const cnt = n => latest.filter(r => r.stars === n).length;
+  $("#rvvTitle").textContent = `⭐ ${g.title}`;
+  $("#rvvSub").textContent = `${g.who}의 게임 · 친구들이 남긴 플레이 소감`;
+  const sum = avg ? `<div class="rv-sum">
+      <div class="rv-avg"><b>${avg.avg.toFixed(1)}</b><span>${"★".repeat(Math.round(avg.avg))}${"☆".repeat(5 - Math.round(avg.avg))}</span><small>${avg.n}명 평가</small></div>
+      <div class="rv-bars">${[5,4,3,2,1].map(n => `<div><span>${n}★</span><i><em style="width:${latest.length ? Math.round(cnt(n) / latest.length * 100) : 0}%"></em></i><span>${cnt(n)}</span></div>`).join("")}</div>
+    </div>` : "";
+  const items = list.map(r => `<li>
+      <div class="rv-who"><b>${esc(r.name || "익명")}</b><span class="s">${"★".repeat(r.stars || 0)}${"☆".repeat(5 - (r.stars || 0))}</span>${r.ver ? `<span class="v">${esc(r.ver)}</span>` : ""}<span>${ago(r.at)}</span></div>
+      ${r.good ? `<p class="rv-txt"><b>👍 재미있던 점</b>${esc(r.good)}</p>` : ""}
+      ${r.idea ? `<p class="rv-txt"><b>💡 추가되면 좋을 점</b>${esc(r.idea)}</p>` : ""}
+    </li>`).join("");
+  const canWrite = g.playable && !(SOLO && !FOCUS_LIST.includes(repo));
+  $("#rvvBody").innerHTML = (list.length ? sum + `<ul class="rv-items">${items}</ul>` : `<div class="rv-none"><div>📝</div>아직 소감이 없어요.<br>첫 소감을 남겨 주세요!</div>`)
+    + `<div class="rp-row">${canWrite ? `<button class="rp-later" type="button" data-rvv-close>닫기</button><button class="rp-send" type="button" data-rvv-write="${esc(repo)}">💬 나도 소감 남기기</button>` : `<button class="rp-send" type="button" data-rvv-close>닫기</button>`}</div>`;
+  $("#rvView").classList.add("open");
+  $("#rvView .rp").scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+function closeReviews(){
+  if(!$("#rvView").classList.contains("open")) return;
+  $("#rvView").classList.remove("open");
+  if(!$("#player").classList.contains("open") && !$("#rvPop").classList.contains("open")) document.body.style.overflow = "";
+}
+$("#rvView").addEventListener("click", e => {
+  if(e.target.id === "rvView" || e.target.closest("[data-rvv-close]")) return closeReviews();
+  const w = e.target.closest("[data-rvv-write]");
+  if(w){ const repo = w.dataset.rvvWrite; closeReviews(); if(S.playing && S.playing.repo === repo) S.playing.endAsked = true; openReview(repo); }
+});
+
 /* ---------- 이벤트 ---------- */
 document.addEventListener("click", e => {
+  const rv = e.target.closest("[data-reviews]"); if(rv){ e.preventDefault(); e.stopPropagation(); openReviews(rv.dataset.reviews); return; }
   const p = e.target.closest("[data-play]"); if(p){ e.preventDefault(); openGame(p.dataset.play); return; }
   const gch = e.target.closest("[data-genre]"); if(gch){ S.genre = gch.dataset.genre; render(); return; }
   const t = e.target.closest("[data-tag]"); if(t){ S.q = ""; document.querySelectorAll("[data-search] input").forEach(i => i.value = ""); S.genre = t.dataset.tag; render(); $("#all").scrollIntoView({behavior:"smooth"}); return; }
