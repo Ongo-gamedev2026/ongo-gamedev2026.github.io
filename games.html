@@ -14,6 +14,7 @@
   --radius:14px; --wrap:1200px;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
 a{color:inherit;text-decoration:none}
@@ -126,6 +127,9 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .pbtn{border:1px solid #3d3880;background:#26225a;color:#fff;border-radius:9px;padding:6px 11px;font-weight:700;font-size:13.5px;white-space:nowrap}
 .pbtn:hover{background:#3a3485}
 .pbtn.x{background:var(--pink);border-color:var(--pink)}
+.pbtn.rv{background:var(--accent2);border-color:var(--accent2);color:#1c1940;font-weight:900;animation:pulse 2.2s ease-in-out infinite}
+.pbtn.rv:hover{background:#ffc93c}
+body.solo #ppVer{display:none}
 .pp-stage{flex:1;position:relative;background:#000}
 .pp-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
 .pp-info{background:#14112d;color:#d6d3f7;padding:10px 16px;font-size:13.5px;display:flex;gap:6px 18px;flex-wrap:wrap;max-height:30vh;overflow:auto}
@@ -163,7 +167,7 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .rp-done div{font-size:54px}
 @media (max-width:440px){.rp-id{grid-template-columns:1fr}}
 
-/* ---------- 소감 완료 · 간식 교환권 ---------- */
+/* ---------- 소감 완료 ---------- */
 .rp-thanks{position:relative;overflow:hidden;text-align:center;padding:26px 22px 22px;word-break:keep-all}
 .rp-thanks .big{font-size:64px;line-height:1;animation:hop .9s ease-in-out infinite alternate}
 @keyframes hop{to{transform:translateY(-6px) rotate(6deg)}}
@@ -174,15 +178,14 @@ aside{display:flex;flex-direction:column;gap:18px;position:sticky;top:80px}
 .coupon::before,.coupon::after{content:"";position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:#fff;border:2px dashed #fb923c}
 .coupon::before{left:-13px;border-left-color:transparent;border-bottom-color:transparent;transform:rotate(45deg)}
 .coupon::after{right:-13px;border-right-color:transparent;border-top-color:transparent;transform:rotate(45deg)}
+.coupon.plain{border:0;background:#f7f7fb}
+.coupon.plain::before,.coupon.plain::after{display:none}
 .coupon .ch{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .coupon .ch b{font-size:17px;font-weight:900;color:#c2410c}
 .coupon .code{font-family:ui-monospace,Menlo,monospace;font-weight:900;font-size:15px;background:#c2410c;color:#fff;border-radius:8px;padding:3px 9px;letter-spacing:1px}
 .coupon dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:10px 0 0;font-size:13.5px}
 .coupon dt{color:#9a5a2f;font-weight:700}
 .coupon dd{margin:0;font-weight:700;color:#3b2414;overflow-wrap:anywhere}
-.snack-how{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:#f5f4ff;text-align:left;font-size:13.5px;line-height:1.6;color:#2e2a63}
-.snack-how b{color:var(--head)}
-.snack-how ol{margin:4px 0 0;padding-left:20px}
 .confetti{position:absolute;inset:0;pointer-events:none}
 .confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:.9;animation:fall 2.4s ease-in forwards}
 @keyframes fall{to{transform:translateY(420px) rotate(540deg);opacity:0}}
@@ -335,7 +338,8 @@ footer a{color:#fff;font-weight:700}
     <div class="pp-top">
       <div class="ttl" id="ppTitle"></div>
       <button class="pbtn" id="ppFull" title="전체 화면">⛶ <span class="lbl">전체 화면</span></button>
-      <a class="pbtn" id="ppVer" target="_blank" rel="noopener" title="버전별 플레이·소감 남기기">💬 <span class="lbl">버전별·소감</span></a>
+      <button class="pbtn rv" id="ppReview" type="button" title="소감 남기기">💬 소감 남기기</button>
+      <a class="pbtn" id="ppVer" target="_blank" rel="noopener" title="버전별 플레이">🗂 <span class="lbl">버전별</span></a>
       <button class="pbtn" id="ppInfoBtn" title="게임 설명">ℹ️ <span class="lbl">설명</span></button>
       <button class="pbtn x" id="ppClose" title="닫기">✕ <span class="lbl">닫기</span></button>
     </div>
@@ -377,12 +381,11 @@ const EXTRA = {
 };
 const PALETTE = [["#ff7a59","#ffb36b"],["#6c5ce7","#a29bfe"],["#00b894","#55efc4"],["#0984e3","#74b9ff"],["#e84393","#fd79a8"],["#2d3436","#636e72"],["#8e44ad","#c39bd3"],["#d35400","#f0b27a"]];
 const NEW_DAYS = 3;
-/* 🍪 소감을 올린 뒤 보여 줄 간식 안내 — 장소·방법이 정해지면 여기만 고치세요 */
-const SNACK = {
-  title: "간식 교환권",
-  how: ["이 화면을 캡처하거나 그대로 켜 두세요.", "게임제작반 선생님(부스)께 보여 주세요.", "간식을 받아 가면 끝! 맛있게 먹어요 😋"]
-};
-
+/* 🏁 게임이 끝났을 때 나오는 화면(결과·게임오버) — 이 화면이 보이면 소감 팝업을 바로 띄워요.
+   게임마다 다르면 여기에 적어 주세요. 없으면 흔한 이름(#gameover-screen 등)으로 찾아봐요. */
+const END_SCREEN = { "game-01": "#gameover-screen" };
+const END_SCREEN_DEFAULT = "#gameover-screen,#game-over,#gameOver,#gameover,#result-screen,#resultScreen,.game-over-screen";
+const END_POPUP_DELAY = 2500;   // 결과 화면을 2.5초 보여 준 뒤 팝업
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RAW = (repo, ref, path) => `https://raw.githubusercontent.com/${ORG}/${repo}/${ref}/${path}?t=${Math.floor(Date.now()/60000)}`;
@@ -595,7 +598,7 @@ function renderFocus(){
   if(!list.length) return;
   box.hidden = false;
   box.classList.toggle("one", list.length === 1);
-  box.innerHTML = `<div class="sec-head"><h2>🎮 지금 플레이해 보세요</h2><span class="more">플레이하고 소감을 남기면 🍪 간식!</span></div>
+  box.innerHTML = `<div class="sec-head"><h2>🎮 지금 플레이해 보세요</h2><span class="more">플레이하고 소감을 남겨 주세요!</span></div>
   <div class="focus-grid">${list.map(focusCard).join("")}</div>
   ${SOLO ? "" : `<div class="more-banner"><span>👇</span><div>아래의 게임도 플레이할 수 있어요!<small>온고 게임제작반 친구들이 만든 다른 게임도 둘러보세요.</small></div></div>`}`;
   applyThumbs();
@@ -614,7 +617,8 @@ function openGame(repo, push = true){
   const ctr = g.controls.map(c => `${esc(c[0])} — ${esc(c[1])}`).join(" / ");
   $("#ppInfo").innerHTML = [g.intro && `<span><b>소개</b> ${esc(g.intro)}</span>`, g.goal && `<span><b>목표</b> ${esc(g.goal)}</span>`, ctr && `<span><b>조작</b> ${ctr}</span>`].filter(Boolean).join("") || "<span>설명이 아직 없어요.</span>";
   $("#ppInfo").hidden = window.innerWidth < 760;
-  S.playing = { repo, t0: Date.now() };
+  S.playing = { repo, t0: Date.now(), endAsked: false };
+  watchEnd(f, g);
   $("#player").classList.add("open");
   document.body.style.overflow = "hidden";
   if(push) history.pushState({play:repo}, "", "#play/" + repo);
@@ -624,13 +628,37 @@ function closeGame(fromPop){
   if(!$("#player").classList.contains("open")) return;
   $("#player").classList.remove("open");
   $("#ppStage").replaceChildren();
+  clearInterval(S.endTimer); clearTimeout(S.endDelay);
   document.body.style.overflow = "";
   if(document.fullscreenElement) document.exitFullscreen?.();
   if(!fromPop && location.hash.startsWith("#play/")) history.back();
   const p = S.playing; S.playing = null;
-  if(p) maybeAskReview(p.repo, (Date.now() - p.t0) / 1000);
+  if(p && !p.endAsked) maybeAskReview(p.repo, (Date.now() - p.t0) / 1000);
 }
 $("#ppClose").onclick = () => closeGame();
+$("#ppReview").onclick = () => { const p = S.playing; if(!p) return; p.endAsked = true; exitFull(); openReview(p.repo); };
+function exitFull(){ try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(_){} }
+/* C. 게임 안의 결과 화면이 보이면 소감 팝업 (같은 사이트라 게임 화면을 들여다볼 수 있어요) */
+function watchEnd(f, g){
+  clearInterval(S.endTimer); clearTimeout(S.endDelay);
+  const sel = END_SCREEN[g.repo] || END_SCREEN_DEFAULT;
+  let wasShown = false;
+  S.endTimer = setInterval(() => {
+    let shown = false;
+    try{
+      const d = f.contentDocument; if(!d) return;
+      shown = [...d.querySelectorAll(sel)].some(el => { const cs = f.contentWindow.getComputedStyle(el); return cs.display !== "none" && cs.visibility !== "hidden" && el.getClientRects().length > 0; });
+    }catch(_){ clearInterval(S.endTimer); return; }
+    if(shown && !wasShown){
+      S.endDelay = setTimeout(() => {
+        const p = S.playing; if(!p || p.repo !== g.repo || $("#rvPop").classList.contains("open")) return;
+        if(ss.get("rpDone:" + g.repo)) return;
+        p.endAsked = true; exitFull(); openReview(g.repo);
+      }, END_POPUP_DELAY);
+    }
+    wasShown = shown;
+  }, 700);
+}
 $("#ppInfoBtn").onclick = () => { $("#ppInfo").hidden = !$("#ppInfo").hidden; };
 $("#ppFull").onclick = () => { const s = $("#ppStage"); (s.requestFullscreen || s.webkitRequestFullscreen || (()=>{})).call(s); };
 $("#player").addEventListener("click", e => { if(e.target.id === "player") closeGame(); });
@@ -680,7 +708,7 @@ function closeReview(skip){
   if(!$("#rvPop").classList.contains("open")) return;
   if(skip && RP.repo) ss.set("rpSkip:" + RP.repo, "1");
   $("#rvPop").classList.remove("open");
-  document.body.style.overflow = "";
+  if(!$("#player").classList.contains("open")) document.body.style.overflow = "";
 }
 async function sendReview(){
   const g = S.games.find(x => x.repo === RP.repo), msg = $("#rpMsg"), btn = $("#rpSend");
@@ -701,32 +729,25 @@ async function sendReview(){
   }catch(e){ err(e.message || "올리지 못했어요. 잠시 뒤 다시 해 주세요."); btn.disabled = false; }
 }
 
-/* 소감 완료 → 고마워요 + 간식 교환권 */
+/* 소감 완료 → 고마워요 */
 function showThanks(g, nick, stars, row){
-  const id = String((row && row.id) || Math.random().toString(16).slice(2)).replace(/-/g, "");
-  const code = id.slice(0, 4).toUpperCase();
-  const t = new Date((row && row.created_at) || Date.now());
-  const when = `${t.getMonth()+1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, "0")}`;
   const colors = ["#ff6b1a","#ffb703","#ff4fa3","#3ee6ff","#6c5ce7","#16a34a"];
   const conf = Array.from({length:28}, (_, i) => `<i style="left:${Math.random()*100}%;background:${colors[i % colors.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s"></i>`).join("");
+  const inGame = $("#player").classList.contains("open");
   $("#rpTitle").textContent = "🎉 소감 고마워요!";
   $("#rpSub").textContent = "만든 친구에게 정말 큰 힘이 돼요.";
   $("#rpBody").innerHTML = `<div class="rp-thanks">
     <div class="confetti" aria-hidden="true">${conf}</div>
-    <div class="big" aria-hidden="true">🍪</div>
+    <div class="big" aria-hidden="true">💌</div>
     <h4><b>${esc(nick)}</b>님, 소감을 올려 줘서 고마워요!</h4>
-    <p>보답으로 작은 간식을 준비했어요. 아래 교환권을 받아 가세요.</p>
-    <div class="coupon">
-      <div class="ch"><b>🎁 ${esc(SNACK.title)}</b><span class="code">#${esc(code)}</span></div>
-      <dl>
-        <dt>닉네임</dt><dd>${esc(nick)}</dd>
+    <p>남겨 준 소감은 ${esc(g ? g.who : "")}이 게임을 더 재미있게 고치는 데 쓰여요.</p>
+    <div class="coupon plain">
+      <dl style="margin:0">
         <dt>플레이한 게임</dt><dd>${esc(g ? g.title : "")}</dd>
         <dt>남긴 별점</dt><dd style="color:#f59e0b">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</dd>
-        <dt>올린 시각</dt><dd>${esc(when)}</dd>
       </dl>
     </div>
-    <div class="snack-how"><b>🍬 간식 받는 방법</b><ol>${SNACK.how.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>
-    <div class="rp-row"><button class="rp-send" type="button" data-rp-later>확인했어요</button></div>
+    <div class="rp-row"><button class="rp-send" type="button" data-rp-later>${inGame ? "게임으로 돌아가기" : "확인"}</button></div>
   </div>`;
   $("#rvPop .rp").scrollTop = 0;
 }
