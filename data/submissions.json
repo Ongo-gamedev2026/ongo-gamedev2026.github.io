@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-24T16:00:31.017Z",
+  "updated": "2026-11-25T19:27:56.031Z",
   "records": [
     {
       "repo": "game-01",
@@ -582,6 +582,17 @@
       "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week5-v1",
       "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
       "recorded_at": "2026-11-24T05:09:53.964Z"
+    },
+    {
+      "repo": "game-08",
+      "tag": "week5-v2",
+      "week": 5,
+      "version": 2,
+      "published_at": "2026-11-25T14:17:56Z",
+      "url": "https://github.com/Ongo-gamedev2026/game-08/releases/tag/week5-v2",
+      "name": "5주차 v2 제출 · 완성 게임 ver3 (Gemini)",
+      "notes": "## 🛠 패치노트 · 게임 ver3\n- 바뀐 점: \n",
+      "recorded_at": "2026-11-25T19:27:56.022Z"
     }
   ]
 }
